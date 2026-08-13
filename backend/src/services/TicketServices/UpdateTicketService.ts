@@ -89,7 +89,12 @@ const UpdateTicketService = async ({
       throw new Error("Need reqUserId or companyId");
     }
 
-    const user = reqUserId ? await User.findByPk(reqUserId) : null;
+    // as filas do usuario sao necessarias para saber se ele pode reabrir a conversa
+    const user = reqUserId
+      ? await User.findByPk(reqUserId, {
+          include: [{ model: Queue, as: "queues" }]
+        })
+      : null;
 
     if (reqUserId) {
       if (!user) {
@@ -125,8 +130,20 @@ const UpdateTicketService = async ({
       }
     }
 
+    // atendente com acesso a fila do ticket tambem pode reabrir conversa fechada,
+    // mesmo que quem tenha atendido antes tenha sido outra pessoa
+    const isReopening =
+      !!status && ticket.status === "closed" && status !== "closed";
+    const userHasTicketQueue = !!user?.queues?.some(
+      queue => queue.id === ticket.queueId
+    );
+
     if (user && ticket.status !== "pending") {
-      if (user.profile !== "admin" && ticket.userId !== user.id) {
+      if (
+        user.profile !== "admin" &&
+        ticket.userId !== user.id &&
+        !(isReopening && userHasTicketQueue)
+      ) {
         throw new AppError("ERR_FORBIDDEN", 403);
       }
     }
@@ -160,13 +177,15 @@ const UpdateTicketService = async ({
       }
     }
 
-    // only admin can reopen closed tickets
+    // podem reabrir conversa fechada: admin, quem atendeu, ou atendente da fila do ticket
     if (
       status &&
       oldStatus === "closed" &&
       status !== "closed" &&
       user &&
-      user.profile !== "admin"
+      user.profile !== "admin" &&
+      ticket.userId !== user.id &&
+      !userHasTicketQueue
     ) {
       throw new AppError("ERR_NO_PERMISSION", 403);
     }

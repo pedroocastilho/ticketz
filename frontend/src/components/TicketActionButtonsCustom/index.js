@@ -119,15 +119,14 @@ const TicketActionButtonsCustom = ({ ticket, showTabGroups }) => {
               <AddBoxIcon />
             </IconButton>
           </Tooltip>
-          {user.profile === "admin" && (
-            <Tooltip title={i18n.t("messagesList.header.buttons.reopen")}>
-              <IconButton
-                onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-              >
-                <Replay />
-              </IconButton>
-            </Tooltip>
-          )}
+          {/* reabrir liberado para as atendentes: o backend so permite nas filas delas */}
+          <Tooltip title={i18n.t("messagesList.header.buttons.reopen")}>
+            <IconButton
+              onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+            >
+              <Replay />
+            </IconButton>
+          </Tooltip>
         </>
       )}
       {(ticket.status === "open" || (showTabGroups && ticket.isGroup)) && (
