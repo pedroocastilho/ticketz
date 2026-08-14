@@ -14,6 +14,7 @@ import SettingsOutlinedIcon from "@material-ui/icons/SettingsOutlined";
 import PeopleAltOutlinedIcon from "@material-ui/icons/PeopleAltOutlined";
 import ContactPhoneOutlinedIcon from "@material-ui/icons/ContactPhoneOutlined";
 import AccountTreeOutlinedIcon from "@material-ui/icons/AccountTreeOutlined";
+import AutoReplyIcon from "@material-ui/icons/QuestionAnswerOutlined";
 import FlashOnIcon from "@material-ui/icons/FlashOn";
 import CalendarToday from "@material-ui/icons/CalendarToday";
 import HelpOutlineIcon from "@material-ui/icons/HelpOutline";
@@ -440,6 +441,11 @@ const MainListItems = props => {
               to="/queues"
               primary={i18n.t("mainDrawer.listItems.queues")}
               icon={<AccountTreeOutlinedIcon />}
+            />
+            <ListItemLink
+              to="/auto-reply-rules"
+              primary={i18n.t("mainDrawer.listItems.autoReplyRules")}
+              icon={<AutoReplyIcon />}
             />
             <ListItemLink
               to="/users"

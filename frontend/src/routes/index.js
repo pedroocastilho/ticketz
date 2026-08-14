@@ -20,6 +20,7 @@ import ContactLists from "../pages/ContactLists/";
 import ContactListItems from "../pages/ContactListItems/";
 // import Companies from "../pages/Companies/";
 import QuickMessages from "../pages/QuickMessages/";
+import AutoReplyRules from "../pages/AutoReplyRules/";
 import { AuthProvider } from "../context/Auth/AuthContext";
 import { TicketsContextProvider } from "../context/Tickets/TicketsContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
@@ -70,6 +71,12 @@ const Routes = () => {
                   exact
                   path="/quick-messages"
                   component={QuickMessages}
+                  isPrivate
+                />
+                <Route
+                  exact
+                  path="/auto-reply-rules"
+                  component={AutoReplyRules}
                   isPrivate
                 />
                 <Route

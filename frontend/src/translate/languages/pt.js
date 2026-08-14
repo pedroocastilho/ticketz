@@ -491,6 +491,7 @@ const messages = {
       },
       mainDrawer: {
         listItems: {
+          autoReplyRules: "Respostas automáticas",
           dashboard: "Dashboard",
           connections: "Conexões",
           tickets: "Atendimentos",

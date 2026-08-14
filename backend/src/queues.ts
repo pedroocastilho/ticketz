@@ -26,6 +26,7 @@ import formatBody, { mustacheFormat } from "./helpers/Mustache";
 import Setting from "./models/Setting";
 import { parseToMilliseconds } from "./helpers/parseToMilliseconds";
 import { startCampaignQueues } from "./queues/campaign";
+import { startAutoReplyProcess } from "./queues/autoReply";
 import { clearRepeatableJobsFromQueues } from "./queues/repeatableJobs";
 import OutOfTicketMessage from "./models/OutOfTicketMessages";
 import { getJidOf } from "./services/WbotServices/getJidOf";
@@ -644,6 +645,8 @@ export async function startQueueProcess() {
   startCampaignQueues().then(() => {
     logger.info("Campaign processing functions started");
   });
+
+  startAutoReplyProcess();
 
   messageQueue.process("SendMessage", handleSendMessage);
 

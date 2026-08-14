@@ -37,6 +37,7 @@ import CreateMessageService, {
 import { logger } from "../../utils/logger";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
+import ScheduleAutoReply from "../AutoReplyServices/ScheduleAutoReply";
 import UpdateTicketService, {
   UpdateTicketData
 } from "../TicketServices/UpdateTicketService";
@@ -2026,6 +2027,12 @@ const handleMessage = async (
     const dontReadTheFirstQuestion = ticket.queue === null;
 
     await ticket.reload();
+
+    // resposta automatica por palavra-chave (ex.: reembolso). Fica depois do
+    // reload para que a fila ja esteja definida na hora de escolher a regra.
+    if (!msg.key.fromMe && !isGroup) {
+      await ScheduleAutoReply({ ticket, body: bodyMessage });
+    }
 
     if (
       justCreated &&
