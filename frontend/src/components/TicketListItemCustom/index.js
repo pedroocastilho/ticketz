@@ -54,6 +54,12 @@ const useStyles = makeStyles(theme => ({
     cursor: "unset"
   },
 
+  // conversa em que ja respondemos e estamos esperando o cliente voltar.
+  // e o oposto do balao de nao lidas: aquele marca "cliente esperando voce"
+  awaitingCustomer: {
+    backgroundColor: "rgba(255, 179, 0, 0.13)"
+  },
+
   noTicketsDiv: {
     display: "flex",
     height: "100px",
@@ -487,7 +493,11 @@ const TicketListItemCustom = ({ ticket, setTabOpen, groupActionButtons }) => {
         }}
         selected={ticketId && +ticketId === ticket.id}
         className={clsx(classes.ticket, {
-          [classes.pendingTicket]: ticket.status === "pending"
+          [classes.pendingTicket]: ticket.status === "pending",
+          [classes.awaitingCustomer]:
+            ticket.lastMessageFromMe &&
+            !ticket.unreadMessages &&
+            ticket.status !== "closed"
         })}
       >
         <Tooltip

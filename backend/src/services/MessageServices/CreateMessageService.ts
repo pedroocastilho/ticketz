@@ -102,6 +102,12 @@ const CreateMessageService = async ({
     await message.update({ queueId: message.ticket.queueId });
   }
 
+  // ponto unico por onde toda mensagem passa: registra quem falou por ultimo,
+  // para a lista poder destacar as conversas em que esperamos o cliente
+  await message.ticket.update({
+    lastMessageFromMe: !!messageData.fromMe
+  });
+
   if (!message) {
     throw new Error("ERR_CREATING_MESSAGE");
   }

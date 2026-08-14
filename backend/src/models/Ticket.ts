@@ -46,6 +46,11 @@ class Ticket extends Model<Ticket> {
   @Column
   lastMessage: string;
 
+  // quem falou por ultimo: true quando a ultima mensagem saiu de nos
+  @Default(false)
+  @Column
+  lastMessageFromMe: boolean;
+
   @Default(false)
   @Column
   isGroup: boolean;
