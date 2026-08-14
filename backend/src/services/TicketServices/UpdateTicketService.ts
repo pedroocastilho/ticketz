@@ -16,6 +16,7 @@ import { logger } from "../../utils/logger";
 import { incrementCounter } from "../CounterServices/IncrementCounter";
 import { getJidOf } from "../WbotServices/getJidOf";
 import Queue from "../../models/Queue";
+import Whatsapp from "../../models/Whatsapp";
 import { _t } from "../TranslationServices/i18nService";
 
 export interface UpdateTicketData {
@@ -25,6 +26,8 @@ export interface UpdateTicketData {
   chatbot?: boolean;
   queueOptionId?: number;
   justClose?: boolean;
+  // conexao de destino ao transferir a conversa de um numero para outro
+  whatsappId?: number;
 }
 
 interface Request {
@@ -103,6 +106,7 @@ const UpdateTicketService = async ({
       companyId = user.companyId;
     }
     const { justClose } = ticketData;
+    const newWhatsappId = ticketData.whatsappId;
     let { status } = ticketData;
     let { queueId, userId } = ticketData;
     const fromChatbot = ticketData.chatbot || false;
@@ -128,6 +132,38 @@ const UpdateTicketService = async ({
       if (newQueue.companyId !== ticket.companyId) {
         throw new AppError("Queue does not belong to the same company", 403);
       }
+    }
+
+    // transferencia da conversa entre conexoes (numero X -> numero Y)
+    if (newWhatsappId && newWhatsappId !== ticket.whatsappId) {
+      // grupo so existe para a conexao que participa dele
+      if (isGroup) {
+        throw new AppError("ERR_CANNOT_MOVE_GROUP_TICKET", 400);
+      }
+
+      const newWhatsapp = await Whatsapp.findByPk(newWhatsappId);
+
+      if (!newWhatsapp || newWhatsapp.companyId !== ticket.companyId) {
+        throw new AppError("ERR_NO_WAPP_FOUND", 404);
+      }
+
+      if (newWhatsapp.status !== "CONNECTED") {
+        throw new AppError("ERR_WAPP_NOT_CONNECTED", 400);
+      }
+
+      // o Ticketz identifica conversa por contato + conexao: se ja existe uma viva
+      // no numero de destino, transferir criaria dois tickets para o mesmo par
+      await CheckContactOpenTickets(ticket.contactId, newWhatsappId);
+
+      logger.info(
+        {
+          ticketId: ticket.id,
+          fromWhatsappId: ticket.whatsappId,
+          toWhatsappId: newWhatsappId,
+          byUserId: user?.id
+        },
+        "Conversa transferida para outra conexao"
+      );
     }
 
     // atendente com acesso a fila do ticket tambem pode reabrir conversa fechada,
@@ -304,7 +340,7 @@ const UpdateTicketService = async ({
       status,
       queueId,
       userId,
-      whatsappId: ticket.whatsappId,
+      whatsappId: newWhatsappId || ticket.whatsappId,
       chatbot,
       queueOptionId
     });

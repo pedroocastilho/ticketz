@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { useHistory } from "react-router-dom";
 
 import Button from "@material-ui/core/Button";
@@ -23,10 +23,24 @@ import api from "../../services/api";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import toastError from "../../errors/toastError";
 import useQueues from "../../hooks/useQueues";
+import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 
 const useStyles = makeStyles(theme => ({
   maxWidth: {
     width: "100%"
+  },
+  connectionField: {
+    marginTop: 20
+  },
+  // aviso de que o cliente passara a receber mensagem de outro numero
+  connectionWarning: {
+    marginTop: 8,
+    padding: "8px 12px",
+    borderRadius: 4,
+    borderLeft: "4px solid #f0ad4e",
+    backgroundColor: "rgba(240, 173, 78, 0.12)",
+    fontSize: "0.85rem",
+    lineHeight: 1.4
   }
 }));
 
@@ -48,7 +62,9 @@ const TransferTicketModalCustom = ({
   const [searchParam, setSearchParam] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedQueue, setSelectedQueue] = useState("");
+  const [selectedWhatsappId, setSelectedWhatsappId] = useState("");
   const classes = useStyles();
+  const { whatsApps } = useContext(WhatsAppsContext);
   const { findAll: findAllQueues } = useQueues();
   const isMounted = useRef(true);
 
@@ -99,12 +115,14 @@ const TransferTicketModalCustom = ({
     onClose();
     setSearchParam("");
     setSelectedUser(null);
+    setSelectedWhatsappId("");
   };
 
   const handleSaveTicket = async e => {
     e.preventDefault();
     if (!ticketid) return;
-    if (!selectedQueue || selectedQueue === "") return;
+    // basta escolher fila OU conexao: da para so mudar o numero da conversa
+    if ((!selectedQueue || selectedQueue === "") && !selectedWhatsappId) return;
     setLoading(true);
     try {
       let data = {};
@@ -122,8 +140,11 @@ const TransferTicketModalCustom = ({
         }
       }
 
+      if (selectedWhatsappId) {
+        data.whatsappId = selectedWhatsappId;
+      }
+
       await api.put(`/tickets/${ticketid}`, data);
-      console.log(data);
 
       history.push(`/tickets`);
     } catch (err) {
@@ -196,6 +217,38 @@ const TransferTicketModalCustom = ({
               ))}
             </Select>
           </FormControl>
+          <FormControl
+            variant="outlined"
+            className={`${classes.maxWidth} ${classes.connectionField}`}
+          >
+            <InputLabel>
+              {i18n.t("transferTicketModal.fieldConnectionLabel")}
+            </InputLabel>
+            <Select
+              value={selectedWhatsappId}
+              onChange={e => setSelectedWhatsappId(e.target.value)}
+              label={i18n.t("transferTicketModal.fieldConnectionLabel")}
+            >
+              <MenuItem value="">
+                <em>
+                  {i18n.t("transferTicketModal.fieldConnectionPlaceholder")}
+                </em>
+              </MenuItem>
+              {/* so conexoes conectadas: o backend recusa transferir para uma offline */}
+              {(whatsApps || [])
+                .filter(whatsApp => whatsApp.status === "CONNECTED")
+                .map(whatsApp => (
+                  <MenuItem key={whatsApp.id} value={whatsApp.id}>
+                    {whatsApp.name}
+                  </MenuItem>
+                ))}
+            </Select>
+          </FormControl>
+          {selectedWhatsappId ? (
+            <div className={classes.connectionWarning}>
+              {i18n.t("transferTicketModal.connectionWarning")}
+            </div>
+          ) : null}
         </DialogContent>
         <DialogActions>
           <Button

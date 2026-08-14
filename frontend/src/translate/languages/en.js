@@ -462,6 +462,10 @@ const messages = {
         fieldLabel: "Type to search for users",
         fieldQueueLabel: "Transfer to queue",
         fieldQueuePlaceholder: "Select a queue",
+        fieldConnectionLabel: "Continue on another number",
+        fieldConnectionPlaceholder: "Keep the current number",
+        connectionWarning:
+          "The customer will receive the next messages from this number. To them it is a new contact, and their reply goes to the destination number.",
         noOptions: "No user found with that name",
         buttons: {
           ok: "Transfer",
@@ -1299,6 +1303,10 @@ const messages = {
         ERR_EDITING_WAPP_MSG: "Could not edit WhatsApp message.",
         ERR_OTHER_OPEN_TICKET:
           "There is already an open ticket for this contact.",
+        ERR_CANNOT_MOVE_GROUP_TICKET:
+          "A group conversation cannot be moved to another number: the group only exists for the number that belongs to it.",
+        ERR_WAPP_NOT_CONNECTED:
+          "The destination number is not connected. Connect it before transferring the conversation.",
         ERR_SESSION_EXPIRED: "Session expired. Please log in.",
         ERR_USER_CREATION_DISABLED:
           "User creation has been disabled by the administrator.",

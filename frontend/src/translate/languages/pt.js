@@ -460,6 +460,10 @@ const messages = {
         fieldLabel: "Digite para buscar usuários",
         fieldQueueLabel: "Transferir para fila",
         fieldQueuePlaceholder: "Selecione uma fila",
+        fieldConnectionLabel: "Continuar por outro número",
+        fieldConnectionPlaceholder: "Manter o número atual",
+        connectionWarning:
+          "O cliente vai receber as próximas mensagens deste número. Para ele é um contato novo, e a resposta dele chega no número de destino.",
         noOptions: "Nenhum usuário encontrado com esse nome",
         buttons: {
           ok: "Transferir",
@@ -1303,6 +1307,10 @@ const messages = {
         ERR_DELETE_WAPP_MSG: "Não foi possível excluir a mensagem do WhatsApp.",
         ERR_EDITING_WAPP_MSG: "Não foi possível editar a mensagem do WhatsApp.",
         ERR_OTHER_OPEN_TICKET: "Já existe um tíquete aberto para este contato.",
+        ERR_CANNOT_MOVE_GROUP_TICKET:
+          "Conversa de grupo não pode ser transferida para outro número: o grupo só existe para o número que participa dele.",
+        ERR_WAPP_NOT_CONNECTED:
+          "O número de destino não está conectado. Conecte-o antes de transferir a conversa.",
         ERR_SESSION_EXPIRED: "Sessão expirada. Por favor entre.",
         ERR_USER_CREATION_DISABLED:
           "A criação do usuário foi desabilitada pelo administrador.",
