@@ -75,6 +75,11 @@ import saveMediaToFile from "../../helpers/saveMediaFile";
 import { _t } from "../TranslationServices/i18nService";
 import WhatsappLidMap from "../../models/WhatsappLidMap";
 import normalizePhone from "../../helpers/NormalizePhone";
+import {
+  detectTicketLanguage,
+  pickLanguageVariant,
+  getTodayOutOfHoursMessage
+} from "../../helpers/localizeAutoMessage";
 
 export interface ImessageUpsert {
   messages: proto.IWebMessageInfo[];
@@ -1242,9 +1247,12 @@ export const startQueue = async (
       (!currentSchedule || currentSchedule.inActivity === false)
     ) {
       outOfHoursCache.set(`ticket-${ticket.id}`, true);
-      const outOfHoursMessage =
-        queue.outOfHoursMessage?.trim() ||
-        "Estamos fora do horário de expediente";
+      const outOfHoursMessage = pickLanguageVariant(
+        getTodayOutOfHoursMessage(queue.schedules) ||
+          queue.outOfHoursMessage?.trim() ||
+          "Estamos fora do horário de expediente",
+        await detectTicketLanguage(ticket.id)
+      );
       const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
         text: formatBody(outOfHoursMessage, ticket)
       });
@@ -1269,7 +1277,13 @@ export const startQueue = async (
 
   if (queue.options.length === 0) {
     if (queue.greetingMessage?.trim()) {
-      const body = formatBody(`${queue.greetingMessage.trim()}`, ticket);
+      const body = formatBody(
+        pickLanguageVariant(
+          queue.greetingMessage.trim(),
+          await detectTicketLanguage(ticket.id)
+        ),
+        ticket
+      );
 
       if (filePath) {
         optionsMsg.caption = body;
@@ -1950,9 +1964,11 @@ const handleMessage = async (
           ) {
             if (!avoidResend) {
               outOfHoursCache.set(`ticket-${ticket.id}`, true);
-              const outOfHoursMessage =
+              const outOfHoursMessage = pickLanguageVariant(
                 whatsapp.outOfHoursMessage.trim() ||
-                _t("We are out of office hours right now", ticket);
+                  _t("We are out of office hours right now", ticket),
+                await detectTicketLanguage(ticket.id)
+              );
               const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
                 text: formatBody(outOfHoursMessage, ticket)
               });
@@ -1986,9 +2002,12 @@ const handleMessage = async (
           ) {
             if (!avoidResend) {
               outOfHoursCache.set(`ticket-${ticket.id}`, true);
-              const outOfHoursMessage =
-                queue.outOfHoursMessage?.trim() ||
-                _t("We are out of office hours right now", ticket);
+              const outOfHoursMessage = pickLanguageVariant(
+                getTodayOutOfHoursMessage(queue.schedules) ||
+                  queue.outOfHoursMessage?.trim() ||
+                  _t("We are out of office hours right now", ticket),
+                await detectTicketLanguage(ticket.id)
+              );
               const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
                 text: formatBody(outOfHoursMessage, ticket)
               });

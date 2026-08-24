@@ -110,7 +110,7 @@ const getDayNames = () => {
   return dayNames;
 };
 
-const OpenHoursEditor = ({ value = {}, onChange }) => {
+const OpenHoursEditor = ({ value = {}, onChange, showRuleMessage = false }) => {
   const classes = useStyles();
   const [activeTab, setActiveTab] = useState(0);
 
@@ -186,6 +186,14 @@ const OpenHoursEditor = ({ value = {}, onChange }) => {
   const handleUpdateHour = (ruleIndex, hourIndex, field, value) => {
     const newRules = [...weeklyRules];
     newRules[ruleIndex].hours[hourIndex][field] = value;
+    setWeeklyRules(newRules);
+  };
+
+  // Mensagem de fora de expediente propria dos dias desta regra (customizacao
+  // Diamond): vazia, vale a mensagem geral da fila.
+  const handleUpdateRuleMessage = (ruleIndex, message) => {
+    const newRules = [...weeklyRules];
+    newRules[ruleIndex].message = message;
     setWeeklyRules(newRules);
   };
 
@@ -404,6 +412,23 @@ const OpenHoursEditor = ({ value = {}, onChange }) => {
                       {i18n.t("openHours.weekly.addHour")}
                     </Button>
                   </Grid>
+
+                  {showRuleMessage && (
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        minRows={2}
+                        variant="outlined"
+                        label="Mensagem de fora de expediente destes dias (opcional)"
+                        helperText="Enviada fora do horário nos dias desta regra. Vazio = usa a mensagem geral da fila. Use uma linha [es] para separar a versão em espanhol."
+                        value={rule.message || ""}
+                        onChange={e =>
+                          handleUpdateRuleMessage(ruleIndex, e.target.value)
+                        }
+                      />
+                    </Grid>
+                  )}
                 </Grid>
               </Paper>
             ))}

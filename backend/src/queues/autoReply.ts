@@ -3,6 +3,10 @@ import AutoReplyRule from "../models/AutoReplyRule";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import formatBody from "../helpers/Mustache";
+import {
+  detectTicketLanguage,
+  pickLanguageVariant
+} from "../helpers/localizeAutoMessage";
 import { logger } from "../utils/logger";
 
 const connection = process.env.REDIS_URI || "";
@@ -35,7 +39,10 @@ async function handleSendAutoReply(job) {
     }
 
     await SendWhatsAppMessage({
-      body: formatBody(rule.message, ticket),
+      body: formatBody(
+        pickLanguageVariant(rule.message, await detectTicketLanguage(ticket.id)),
+        ticket
+      ),
       ticket
     });
 

@@ -18,6 +18,10 @@ import { getJidOf } from "../WbotServices/getJidOf";
 import Queue from "../../models/Queue";
 import Whatsapp from "../../models/Whatsapp";
 import { _t } from "../TranslationServices/i18nService";
+import {
+  detectTicketLanguage,
+  pickLanguageVariant
+} from "../../helpers/localizeAutoMessage";
 
 export interface UpdateTicketData {
   status?: string;
@@ -301,7 +305,10 @@ const UpdateTicketService = async ({
         ticket.whatsapp.status === "CONNECTED"
       ) {
         const body = formatBody(
-          `${ticket.whatsapp.complationMessage.trim()}`,
+          pickLanguageVariant(
+            ticket.whatsapp.complationMessage.trim(),
+            await detectTicketLanguage(ticket.id)
+          ),
           ticket
         );
 

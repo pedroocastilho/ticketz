@@ -24,6 +24,7 @@ const ShowWhatsAppService = async (
           "color",
           "greetingMessage",
           "outOfHoursMessage",
+          "schedules",
           "mediaPath",
           "mediaName"
         ],

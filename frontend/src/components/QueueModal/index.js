@@ -416,7 +416,11 @@ const QueueModal = ({ open, onClose, queueId }) => {
           <Paper style={{ padding: 20 }}>
             {isOpenHoursFormat(schedules) ? (
               <>
-                <OpenHoursEditor value={schedules} onChange={setSchedules} />
+                <OpenHoursEditor
+                  value={schedules}
+                  onChange={setSchedules}
+                  showRuleMessage
+                />
                 <div
                   style={{
                     display: "flex",
