@@ -135,6 +135,16 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const userId = Number(req.user.id) || null;
 
   const ticket = await ShowTicketService(ticketId, companyId);
+
+  // supervisor apenas acompanha: nao responde em ticket atribuido a outro atendente
+  if (
+    req.user.profile === "supervisor" &&
+    ticket.userId &&
+    ticket.userId !== userId
+  ) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
   const { channel } = ticket;
   if (channel === "whatsapp") {
     await SetTicketMessagesAsRead(ticket);

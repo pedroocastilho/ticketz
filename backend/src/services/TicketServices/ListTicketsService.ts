@@ -155,6 +155,21 @@ const ListTicketsService = async ({
     }
   }
 
+  // supervisor ve todos os tickets, porem somente das filas as quais pertence
+  if (showAll === "true" && user.profile === "supervisor") {
+    const supervisorQueueIds = user.queues
+      .map(queue => queue.id)
+      .filter(queueId => queueIds.includes(queueId));
+    andedOrs.length = 0;
+    whereCondition = {
+      [Op.and]: andedOrs,
+      queueId: { [Op.or]: [supervisorQueueIds] }
+    };
+    if (groupsTab) {
+      whereCondition.isGroup = groups === "true";
+    }
+  }
+
   if (status) {
     whereCondition = {
       ...whereCondition,

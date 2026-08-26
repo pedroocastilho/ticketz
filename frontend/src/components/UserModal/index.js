@@ -210,6 +210,9 @@ const UserModal = ({ open, onClose, userId }) => {
                             <MenuItem value="admin">
                               {i18n.t("userModal.listItems.adminProfile")}
                             </MenuItem>
+                            <MenuItem value="supervisor">
+                              {i18n.t("userModal.listItems.supervisorProfile")}
+                            </MenuItem>
                             <MenuItem value="user">
                               {i18n.t("userModal.listItems.userProfile")}
                             </MenuItem>

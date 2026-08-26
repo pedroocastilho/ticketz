@@ -1087,8 +1087,14 @@ const MessageInputCustom = props => {
   };
 
   const isGroup = showTabGroups && ticket.isGroup;
+  // supervisor apenas acompanha conversa atribuida a outro atendente
+  const isSupervisorViewing =
+    user?.profile === "supervisor" && !!ticket.userId && ticket.userId !== user.id;
   const disableOption =
-    (!isGroup && loading) || recording || ticketStatus === "closed";
+    (!isGroup && loading) ||
+    recording ||
+    ticketStatus === "closed" ||
+    isSupervisorViewing;
 
   const renderReplyingMessage = message => {
     return (

@@ -178,10 +178,15 @@ const UpdateTicketService = async ({
       queue => queue.id === ticket.queueId
     );
 
+    // supervisor pode intervir (transferir, resolver, reabrir) em tickets das filas dele
+    const isQueueSupervisor =
+      user?.profile === "supervisor" && userHasTicketQueue;
+
     if (user && ticket.status !== "pending") {
       if (
         user.profile !== "admin" &&
         ticket.userId !== user.id &&
+        !isQueueSupervisor &&
         !(isReopening && userHasTicketQueue)
       ) {
         throw new AppError("ERR_FORBIDDEN", 403);

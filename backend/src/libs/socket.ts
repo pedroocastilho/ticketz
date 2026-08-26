@@ -227,7 +227,10 @@ export const initIO = (httpServer: Server): SocketIO => {
           if (
             ticket &&
             ticket.companyId === user.companyId &&
-            (ticket.userId === user.id || user.profile === "admin")
+            (ticket.userId === user.id ||
+              user.profile === "admin" ||
+              (user.profile === "supervisor" &&
+                user.queues.some(queue => queue.id === ticket.queueId)))
           ) {
             joinTicketChannel(socket, ticketId, user, counters);
           } else if (
@@ -320,6 +323,14 @@ export const initIO = (httpServer: Server): SocketIO => {
             `Admin ${user.id} of company ${user.companyId} joined ${status} tickets channel.`
           );
           socket.join(`company-${user.companyId}-${status}`);
+        } else if (user.profile === "supervisor") {
+          // supervisor acompanha qualquer status, porem somente das filas dele
+          user.queues.forEach(queue => {
+            logger.debug(
+              `Supervisor ${user.id} of company ${user.companyId} joined queue ${queue.id} ${status} tickets channel.`
+            );
+            socket.join(`queue-${queue.id}-${status}`);
+          });
         } else if (status === "pending") {
           user.queues.forEach(queue => {
             logger.debug(
@@ -340,6 +351,13 @@ export const initIO = (httpServer: Server): SocketIO => {
             `Admin ${user.id} of company ${user.companyId} leaved ${status} tickets channel.`
           );
           socket.leave(`company-${user.companyId}-${status}`);
+        } else if (user.profile === "supervisor") {
+          user.queues.forEach(queue => {
+            logger.debug(
+              `Supervisor ${user.id} of company ${user.companyId} leaved queue ${queue.id} ${status} tickets channel.`
+            );
+            socket.leave(`queue-${queue.id}-${status}`);
+          });
         } else if (status === "pending") {
           user.queues.forEach(queue => {
             logger.debug(

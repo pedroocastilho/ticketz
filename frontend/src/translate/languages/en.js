@@ -353,6 +353,7 @@ const messages = {
         },
         listItems: {
           adminProfile: "Administrator",
+          supervisorProfile: "Supervisor",
           userProfile: "User"
         },
         form: {
