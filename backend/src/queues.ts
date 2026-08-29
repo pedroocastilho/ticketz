@@ -28,6 +28,7 @@ import { parseToMilliseconds } from "./helpers/parseToMilliseconds";
 import { startCampaignQueues } from "./queues/campaign";
 import { startAutoReplyProcess } from "./queues/autoReply";
 import { clearRepeatableJobsFromQueues } from "./queues/repeatableJobs";
+import { handlePendingTicketTimeout } from "./queues/pendingTicketTimeout";
 import OutOfTicketMessage from "./models/OutOfTicketMessages";
 import { getJidOf } from "./services/WbotServices/getJidOf";
 import { _t } from "./services/TranslationServices/i18nService";
@@ -520,6 +521,12 @@ async function handleTicketTimeouts() {
         openTicketTimeout,
         openTicketTimeoutAction
       );
+    }
+    const pendingTicketTimeout = Number(
+      await GetCompanySetting(company.id, "pendingTicketTimeout", "0")
+    );
+    if (pendingTicketTimeout) {
+      await handlePendingTicketTimeout(company.id, pendingTicketTimeout);
     }
     const chatbotTicketTimeout = Number(
       await GetCompanySetting(company.id, "chatbotTicketTimeout", "0")

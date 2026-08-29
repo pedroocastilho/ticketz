@@ -125,6 +125,7 @@ export default function Options(props) {
   const [openTicketTimeout, setOpenTicketTimeout] = useState("0");
   const [openTicketTimeoutAction, setOpenTicketTimeoutAction] =
     useState("pending");
+  const [pendingTicketTimeout, setPendingTicketTimeout] = useState("0");
   const [chatbotTicketTimeout, setChatbotTicketTimeout] = useState("0");
   const [chatbotTicketTimeoutAction, setChatbotTicketTimeoutAction] =
     useState(0);
@@ -296,6 +297,11 @@ export default function Options(props) {
         s => s.key === "openTicketTimeoutAction"
       );
       setOpenTicketTimeoutAction(openTicketTimeoutAction?.value || "pending");
+
+      const pendingTicketTimeout = settings.find(
+        s => s.key === "pendingTicketTimeout"
+      );
+      setPendingTicketTimeout(pendingTicketTimeout?.value || "0");
 
       const chatbotTicketTimeout = settings.find(
         s => s.key === "chatbotTicketTimeout"
@@ -816,6 +822,29 @@ export default function Options(props) {
               <MenuItem value={"pending"}>Retornar para a fila</MenuItem>
               <MenuItem value={"closed"}>Fechar atendimento</MenuItem>
             </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid xs={12} sm={6} md={4} item>
+          <FormControl className={classes.selectContainer}>
+            <TextField
+              id="pendingticket-timeout-field"
+              label="Timeout para ticket aguardando (minutos)"
+              variant="standard"
+              name="pendingTicketTimeout"
+              type="number"
+              value={pendingTicketTimeout}
+              onChange={e => {
+                setPendingTicketTimeout(e.target.value);
+              }}
+              onBlur={async _ => {
+                await handleSetting(
+                  "pendingTicketTimeout",
+                  pendingTicketTimeout
+                );
+              }}
+              helperText="0 desativa. Fecha sozinho o atendimento parado na aba Aguardando."
+            />
           </FormControl>
         </Grid>
 
