@@ -483,6 +483,10 @@ const messages = {
         }
       },
       newTicketModal: {
+        fieldConnectionLabel: "Connection (outgoing number)",
+        connectionHint:
+          "The conversation will be sent from this number. Check it before saving.",
+        selectConnection: "Select which number the conversation will be sent from",
         title: "Create Ticket",
         fieldLabel: "Type to search for contact",
         add: "Add",

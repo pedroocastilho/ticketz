@@ -10,6 +10,7 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 import ContactModal from "../ContactModal";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import {
   Grid,
   ListItemText,
@@ -29,7 +30,34 @@ const NewTicketModal = ({ modalOpen, onClose, contact }) => {
   const [newContact, setNewContact] = useState({});
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  // conexao (numero) pela qual a conversa vai sair: antes o backend usava
+  // sempre a padrao da empresa e a mensagem saia do numero de outro atendente
+  const [selectedWhatsappId, setSelectedWhatsappId] = useState("");
   const { user } = useContext(AuthContext);
+  const { whatsApps } = useContext(WhatsAppsContext);
+
+  const connectedWhatsApps = (whatsApps || []).filter(
+    whatsApp =>
+      whatsApp.status === "CONNECTED" &&
+      (!whatsApp.channel || whatsApp.channel === "whatsapp")
+  );
+
+  // sugere a conexao ligada a fila escolhida (ou as filas do atendente);
+  // entre varias, prefere a padrao
+  const suggestWhatsapp = queueId => {
+    const queueIds = queueId
+      ? [queueId]
+      : (user.queues || []).map(queue => queue.id);
+    const linked = connectedWhatsApps.filter(whatsApp =>
+      (whatsApp.queues || []).some(queue => queueIds.includes(queue.id))
+    );
+    const candidates = linked.length > 0 ? linked : connectedWhatsApps;
+    if (candidates.length === 0) return "";
+    if (linked.length === 0 && candidates.length > 1) return "";
+    const chosen =
+      candidates.find(whatsApp => whatsApp.isDefault) || candidates[0];
+    return chosen.id;
+  };
 
   useEffect(() => {
     if (contact) {
@@ -40,7 +68,17 @@ const NewTicketModal = ({ modalOpen, onClose, contact }) => {
 
   useEffect(() => {
     setSelectedQueue("");
+    setSelectedWhatsappId("");
   }, [modalOpen]);
+
+  // preenche a sugestao assim que o modal abre ou as conexoes carregam,
+  // sem sobrescrever uma escolha manual do atendente
+  useEffect(() => {
+    if (!modalOpen || selectedWhatsappId) return;
+    const suggested = suggestWhatsapp(selectedQueue);
+    if (suggested) setSelectedWhatsappId(suggested);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalOpen, whatsApps, selectedQueue]);
 
   const handleClose = () => {
     onClose();
@@ -53,13 +91,21 @@ const NewTicketModal = ({ modalOpen, onClose, contact }) => {
       toast.error("Selecione uma fila");
       return;
     }
+    if (connectedWhatsApps.length > 1 && !selectedWhatsappId) {
+      toast.error(i18n.t("newTicketModal.selectConnection"));
+      return;
+    }
     setLoading(true);
     try {
       const queueId = selectedQueue !== "" ? selectedQueue : null;
+      const whatsappId =
+        selectedWhatsappId ||
+        (connectedWhatsApps.length === 1 ? connectedWhatsApps[0].id : null);
       const { data: ticket } = await api.post("/tickets", {
         contactId: contactId,
         queueId,
         userId: user.id,
+        whatsappId,
         status: "open"
       });
       onClose(ticket);
@@ -136,6 +182,7 @@ const NewTicketModal = ({ modalOpen, onClose, contact }) => {
                   label={i18n.t("common.queue")}
                   onChange={e => {
                     setSelectedQueue(e.target.value);
+                    setSelectedWhatsappId(suggestWhatsapp(e.target.value));
                   }}
                   MenuProps={{
                     anchorOrigin: {
@@ -164,6 +211,42 @@ const NewTicketModal = ({ modalOpen, onClose, contact }) => {
                     ))}
                 </Select>
               </FormControl>
+            </Grid>
+            <Grid xs={12} item>
+              <FormControl fullWidth variant="outlined" margin="dense">
+                <InputLabel id="whatsapp-label">
+                  {i18n.t("newTicketModal.fieldConnectionLabel")}
+                </InputLabel>
+                <Select
+                  fullWidth
+                  labelId="whatsapp-label"
+                  variant="outlined"
+                  margin="dense"
+                  value={selectedWhatsappId || ""}
+                  label={i18n.t("newTicketModal.fieldConnectionLabel")}
+                  onChange={e => setSelectedWhatsappId(e.target.value)}
+                  MenuProps={{
+                    anchorOrigin: {
+                      vertical: "bottom",
+                      horizontal: "left"
+                    },
+                    transformOrigin: {
+                      vertical: "top",
+                      horizontal: "left"
+                    },
+                    getContentAnchorEl: null
+                  }}
+                >
+                  {connectedWhatsApps.map(whatsApp => (
+                    <MenuItem dense key={whatsApp.id} value={whatsApp.id}>
+                      <ListItemText primary={whatsApp.name} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <div style={{ fontSize: "0.8rem", opacity: 0.8, marginTop: 4 }}>
+                {i18n.t("newTicketModal.connectionHint")}
+              </div>
             </Grid>
           </Grid>
         </DialogContent>

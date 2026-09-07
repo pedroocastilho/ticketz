@@ -1,6 +1,6 @@
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
-import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import GetUserWhatsApp from "../../helpers/GetUserWhatsApp";
 import Ticket from "../../models/Ticket";
 import ShowContactService from "../ContactServices/ShowContactService";
 import { getIO } from "../../libs/socket";
@@ -13,15 +13,24 @@ interface Request {
   userId: number;
   companyId: number;
   queueId?: number;
+  // conexao (numero) pela qual a conversa vai sair; se ausente, e deduzida
+  // da fila e do atendente em vez de cair na padrao da empresa
+  whatsappId?: number;
 }
 
 const CreateTicketService = async ({
   contactId,
   userId,
   queueId,
-  companyId
+  companyId,
+  whatsappId
 }: Request): Promise<Ticket> => {
-  const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
+  const defaultWhatsapp = await GetUserWhatsApp({
+    companyId,
+    userId,
+    queueId,
+    whatsappId
+  });
 
   let ticket = await CheckContactOpenTickets(
     contactId,

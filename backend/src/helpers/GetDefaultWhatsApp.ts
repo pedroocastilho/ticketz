@@ -13,9 +13,6 @@ const GetDefaultWhatsApp = async (companyId: number): Promise<Whatsapp> => {
   });
 
   if (!defaultWhatsapp) {
-    logger.info(
-      "No default WhatsApp found, falling back to any connected WhatsApp"
-    );
     defaultWhatsapp = await Whatsapp.findOne({
       where: {
         companyId,
@@ -23,6 +20,12 @@ const GetDefaultWhatsApp = async (companyId: number): Promise<Whatsapp> => {
         status: "CONNECTED"
       }
     });
+    // registra qual numero foi escolhido: sem isso ninguem descobre por que
+    // uma mensagem saiu de outro numero
+    logger.warn(
+      { companyId, whatsapp: defaultWhatsapp?.name },
+      "No default WhatsApp found, falling back to any connected WhatsApp"
+    );
   }
 
   if (!defaultWhatsapp) {

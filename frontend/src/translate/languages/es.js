@@ -481,6 +481,10 @@ const messages = {
         }
       },
       newTicketModal: {
+        fieldConnectionLabel: "Conexión (número de salida)",
+        connectionHint:
+          "La conversación saldrá por este número. Revísalo antes de guardar.",
+        selectConnection: "Selecciona por qué número saldrá la conversación",
         title: "Crear Ticket",
         fieldLabel: "Escribe para buscar el contacto",
         add: "Agregar",

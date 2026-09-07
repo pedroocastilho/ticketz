@@ -9,7 +9,7 @@ import Whatsapp from "./models/Whatsapp";
 import { logger } from "./utils/logger";
 import Schedule from "./models/Schedule";
 import Contact from "./models/Contact";
-import GetDefaultWhatsApp from "./helpers/GetDefaultWhatsApp";
+import GetUserWhatsApp from "./helpers/GetUserWhatsApp";
 import GetWhatsappWbot from "./helpers/GetWhatsappWbot";
 import User from "./models/User";
 import Company from "./models/Company";
@@ -140,7 +140,12 @@ async function handleSendScheduledMessage(job) {
   }
 
   try {
-    const whatsapp = await GetDefaultWhatsApp(schedule.companyId);
+    // sai pelo numero ligado as filas de quem agendou, nao pela padrao da empresa
+    const whatsapp = await GetUserWhatsApp({
+      companyId: schedule.companyId,
+      userId: schedule.userId,
+      contactId: schedule.contactId
+    });
 
     const message = await SendMessage(whatsapp, {
       number: schedule.contact.number,

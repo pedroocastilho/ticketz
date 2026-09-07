@@ -2,7 +2,6 @@ import Message from "../../models/Message";
 import { logger } from "../../utils/logger";
 import Contact from "../../models/Contact";
 import Queue from "../../models/Queue";
-import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import AppError from "../../errors/AppError";
 import { getWbot } from "../../libs/wbot";
 import {
@@ -68,11 +67,14 @@ const ForwardMessageService = async (
     if (!queue) {
       throw new AppError("ERR_FORBIDDEN", 403);
     }
+    // o ticket nasce na mesma conexao que vai enviar o encaminhamento;
+    // antes nascia na padrao da empresa e a mensagem saia por outro numero
     ticket = await CreateTicketService({
       contactId: contact.id,
       userId: user.id,
       companyId: contact.companyId,
-      queueId: queue?.id
+      queueId: queue?.id,
+      whatsappId: whatsapp.id
     });
     if (!ticket) {
       throw new AppError("ERR_CREATING_TICKET", 500);
