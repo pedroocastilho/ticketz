@@ -53,10 +53,11 @@ const NewTicketModal = ({ modalOpen, onClose, contact }) => {
     );
     const candidates = linked.length > 0 ? linked : connectedWhatsApps;
     if (candidates.length === 0) return "";
-    if (linked.length === 0 && candidates.length > 1) return "";
-    const chosen =
-      candidates.find(whatsApp => whatsApp.isDefault) || candidates[0];
-    return chosen.id;
+    if (candidates.length === 1) return candidates[0].id;
+    // mais de um numero possivel: so sugere se um deles for o padrao,
+    // senao deixa vazio para o atendente escolher de proposito
+    const defaultOne = candidates.find(whatsApp => whatsApp.isDefault);
+    return defaultOne ? defaultOne.id : "";
   };
 
   useEffect(() => {
