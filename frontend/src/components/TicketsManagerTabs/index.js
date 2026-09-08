@@ -144,7 +144,8 @@ const TicketsManagerTabs = () => {
   }, []);
 
   useEffect(() => {
-    if (user.profile.toUpperCase() === "ADMIN") {
+    // supervisor tambem comeca vendo as conversas de todo mundo das filas dele
+    if (["ADMIN", "SUPERVISOR"].includes(user.profile.toUpperCase())) {
       setShowAllTickets(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

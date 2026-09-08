@@ -4,12 +4,12 @@ const rules = {
   },
 
   supervisor: {
-    static: ["tickets-manager:showall"]
+    static: ["tickets-manager:showall", "dashboard:view"]
   },
 
   admin: {
     static: [
-      //"dashboard:view",
+      "dashboard:view",
       "drawer-admin-items:view",
       "tickets-manager:showall",
       "user-modal:editProfile",

@@ -322,7 +322,7 @@ const MainListItems = props => {
 
       <Can
         role={user.profile}
-        perform={"drawer-admin-items:view"}
+        perform={"dashboard:view"}
         yes={() => (
           <>
             <Divider />

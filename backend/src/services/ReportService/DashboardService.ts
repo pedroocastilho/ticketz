@@ -167,8 +167,10 @@ export async function usersStatusSummary(companyId) {
       ],
       [fn("COUNT", col("tickets.id")), "openTicketsCount"]
     ],
+    // contas admin (gestao) nao atendem: so atendentes e supervisores na tabela
     where: {
-      companyId
+      companyId,
+      profile: { [Op.ne]: "admin" }
     },
     include: [
       {
@@ -235,8 +237,10 @@ export async function userReport(companyId: number, start: Date, end: Date) {
         "online"
       ]
     ],
+    // contas admin (gestao) nao atendem: so atendentes e supervisores na tabela
     where: {
-      companyId
+      companyId,
+      profile: { [Op.ne]: "admin" }
     },
     include: [
       {

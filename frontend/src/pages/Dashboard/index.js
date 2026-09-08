@@ -329,7 +329,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     getCurrentUserInfo().then(user => {
-      if (user?.profile !== "admin") {
+      if (!["admin", "supervisor"].includes(user?.profile)) {
         window.location.href = "/tickets";
       }
       setCurrentUser(user);
@@ -543,7 +543,7 @@ const Dashboard = () => {
     );
   }
 
-  if (currentUser?.profile !== "admin") {
+  if (!["admin", "supervisor"].includes(currentUser?.profile)) {
     return <div></div>;
   }
 

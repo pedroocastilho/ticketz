@@ -38,6 +38,7 @@ import { logger } from "../../utils/logger";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import ScheduleAutoReply from "../AutoReplyServices/ScheduleAutoReply";
+import HandleReplyFromPhone from "../../helpers/HandleReplyFromPhone";
 import UpdateTicketService, {
   UpdateTicketData
 } from "../TicketServices/UpdateTicketService";
@@ -1615,7 +1616,11 @@ const handleMessage = async (
   msg: WAMessage,
   wbot: Session,
   companyId: number,
-  queueId?: number
+  queueId?: number,
+  // tipo do evento messages.upsert do Baileys: "notify" e mensagem chegando ao
+  // vivo (inclusive a que o atendente manda pelo celular), "append" e a que a
+  // propria plataforma acabou de enviar ou historico recebido offline
+  upsertType?: string
 ): Promise<void> => {
   if (!isValidMsg(msg)) return;
 
@@ -1945,6 +1950,13 @@ const handleMessage = async (
       }
       if (justCreated && newMessage) {
         websocketCreateMessage(newMessage);
+      }
+      // resposta do atendente pelo celular (fora da plataforma): aceita a
+      // conversa e zera as nao lidas, senao fica em "Aguardando" com contador
+      // subindo mesmo ja respondida. O que a plataforma envia chega como
+      // "append" e nao passa por aqui.
+      if (msg.key.fromMe && !isGroup && !findOnly && upsertType === "notify") {
+        await HandleReplyFromPhone(ticket, whatsapp);
       }
       return;
     }
@@ -2307,7 +2319,13 @@ const wbotMessageListener = async (
         if (await verifyRecentCampaign(message, companyId)) {
           return;
         }
-        await handleMessage(message, wbot, companyId);
+        await handleMessage(
+          message,
+          wbot,
+          companyId,
+          undefined,
+          messageUpsert.type
+        );
       });
     });
 

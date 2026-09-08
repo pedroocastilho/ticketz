@@ -2,7 +2,7 @@ import express from "express";
 import isAuth from "../middleware/isAuth";
 
 import * as DashboardController from "../controllers/DashboardController";
-import isAdmin from "../middleware/isAdmin";
+import isAdminOrSupervisor from "../middleware/isAdminOrSupervisor";
 import isCompliant from "../middleware/isCompliant";
 
 const routes = express.Router();
@@ -10,7 +10,7 @@ const routes = express.Router();
 routes.get(
   "/dashboard/status",
   isAuth,
-  isAdmin,
+  isAdminOrSupervisor,
   isCompliant,
   DashboardController.statusSummary
 );
@@ -18,7 +18,7 @@ routes.get(
 routes.get(
   "/dashboard/tickets",
   isAuth,
-  isAdmin,
+  isAdminOrSupervisor,
   isCompliant,
   DashboardController.ticketsStatistic
 );
@@ -26,7 +26,7 @@ routes.get(
 routes.get(
   "/dashboard/users",
   isAuth,
-  isAdmin,
+  isAdminOrSupervisor,
   isCompliant,
   DashboardController.usersReport
 );
