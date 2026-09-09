@@ -38,6 +38,7 @@ import { logger } from "../../utils/logger";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import ScheduleAutoReply from "../AutoReplyServices/ScheduleAutoReply";
+import NotifyDiamondWebhook from "../WebhookServices/NotifyDiamondWebhook";
 import HandleReplyFromPhone from "../../helpers/HandleReplyFromPhone";
 import UpdateTicketService, {
   UpdateTicketData
@@ -2063,6 +2064,10 @@ const handleMessage = async (
     // reload para que a fila ja esteja definida na hora de escolher a regra.
     if (!msg.key.fromMe && !isGroup) {
       await ScheduleAutoReply({ ticket, body: bodyMessage });
+
+      // repassa a mensagem do cliente para a API do Diamond Agentes. Sem
+      // await de proposito: a entrega nao pode atrasar o atendimento
+      NotifyDiamondWebhook({ number: contact.number, body: bodyMessage });
     }
 
     if (
