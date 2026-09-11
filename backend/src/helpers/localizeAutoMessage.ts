@@ -13,12 +13,20 @@ import { OpenHoursData } from "./checkOpenHours";
 // - Cada regra semanal de horario da fila pode ter uma mensagem propria de
 //   fora de expediente (campo "message" no JSON weeklyRules), permitindo texto
 //   diferente para sabado, domingo etc.
+// - Uma excecao por data (campo "message" no JSON overrides) tem prioridade
+//   sobre a regra semanal: serve para feriado ou dia sem atendimento avulso.
 
 export type AutoMessageLang = "pt" | "es";
 
 type WeeklyRuleWithMessage = {
   days: string[];
   hours: { from: string; to: string }[];
+  message?: string;
+};
+
+type OverrideWithMessage = {
+  date: string;
+  repeat?: "yearly";
   message?: string;
 };
 
@@ -237,11 +245,22 @@ export function getTodayOutOfHoursMessage(
   if (!schedules?.timezone || !Array.isArray(schedules.weeklyRules)) {
     return null;
   }
-  const weekday = DateTime.now()
-    .setZone(schedules.timezone)
-    .toFormat("ccc")
-    .toLowerCase()
-    .slice(0, 3);
+  const now = DateTime.now().setZone(schedules.timezone);
+  const todayStr = now.toISODate();
+  const todayMonthDay = now.toFormat("MM-dd");
+  const weekday = now.toFormat("ccc").toLowerCase().slice(0, 3);
+
+  // mesma regra de casamento de data do checkOpenHours
+  const override = (
+    (schedules.overrides || []) as OverrideWithMessage[]
+  ).find(o => {
+    if (!o.message?.trim()) return false;
+    if (o.repeat === "yearly") return o.date?.slice(5) === todayMonthDay;
+    return o.date === todayStr;
+  });
+  if (override) {
+    return override.message.trim();
+  }
 
   const rule = (schedules.weeklyRules as WeeklyRuleWithMessage[]).find(
     r => r.days?.includes(weekday) && r.message?.trim()

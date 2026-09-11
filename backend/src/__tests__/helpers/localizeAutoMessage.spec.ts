@@ -1,3 +1,4 @@
+import { DateTime } from "luxon";
 import {
   detectLanguage,
   pickLanguageVariant,
@@ -86,6 +87,54 @@ describe("getTodayOutOfHoursMessage", () => {
       ]
     } as OpenHoursData;
     expect(getTodayOutOfHoursMessage(schedules)).toBeNull();
+  });
+
+  it("prefere a mensagem da excecao por data que cai em hoje", () => {
+    const today = DateTime.now().setZone("America/Sao_Paulo").toISODate();
+    const schedules = {
+      timezone: "America/Sao_Paulo",
+      overrides: [
+        { date: "2000-01-01", closed: true, message: "outra data" },
+        { date: today, closed: true, message: "hoje sem atendimento" }
+      ],
+      weeklyRules: [
+        {
+          days: allDays,
+          hours: [{ from: "08:00", to: "18:00" }],
+          message: "mensagem da semana"
+        }
+      ]
+    } as unknown as OpenHoursData;
+    expect(getTodayOutOfHoursMessage(schedules)).toBe("hoje sem atendimento");
+  });
+
+  it("excecao anual casa pelo mes e dia de hoje", () => {
+    const monthDay = DateTime.now()
+      .setZone("America/Sao_Paulo")
+      .toFormat("MM-dd");
+    const schedules = {
+      timezone: "America/Sao_Paulo",
+      overrides: [
+        {
+          date: `1999-${monthDay}`,
+          repeat: "yearly",
+          closed: true,
+          message: "feriado"
+        }
+      ],
+      weeklyRules: [{ days: allDays, hours: [], message: "semana" }]
+    } as unknown as OpenHoursData;
+    expect(getTodayOutOfHoursMessage(schedules)).toBe("feriado");
+  });
+
+  it("excecao de hoje sem mensagem cai na mensagem da regra semanal", () => {
+    const today = DateTime.now().setZone("America/Sao_Paulo").toISODate();
+    const schedules = {
+      timezone: "America/Sao_Paulo",
+      overrides: [{ date: today, closed: true }],
+      weeklyRules: [{ days: allDays, hours: [], message: "semana" }]
+    } as unknown as OpenHoursData;
+    expect(getTodayOutOfHoursMessage(schedules)).toBe("semana");
   });
 
   it("devolve null para horarios em formato legado ou ausentes", () => {

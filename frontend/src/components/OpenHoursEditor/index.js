@@ -631,6 +631,27 @@ const OpenHoursEditor = ({ value = {}, onChange, showRuleMessage = false }) => {
                       </Button>
                     </Grid>
                   )}
+
+                  {showRuleMessage && (
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        minRows={2}
+                        variant="outlined"
+                        label="Mensagem de fora de expediente nesta data (opcional)"
+                        helperText="Enviada fora do horário só nesta data, no lugar da mensagem do dia da semana. Vazio = usa a mensagem do dia da semana. Use uma linha [es] para separar a versão em espanhol."
+                        value={override.message || ""}
+                        onChange={e =>
+                          handleUpdateOverride(
+                            overrideIndex,
+                            "message",
+                            e.target.value
+                          )
+                        }
+                      />
+                    </Grid>
+                  )}
                 </Grid>
               </Paper>
             ))}
