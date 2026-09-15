@@ -101,6 +101,8 @@ const messages = {
         token: "Token"
       },
       dashboard: {
+        avgServiceTime: "Tempo médio de atendimento (no expediente)",
+        avgWaitTime: "Tempo médio de espera (no expediente)",
         charts: {
           perDay: {
             title: "Atendimentos hoje: "

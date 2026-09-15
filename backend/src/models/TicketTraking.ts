@@ -84,6 +84,13 @@ class TicketTraking extends Model {
 
   @Column
   serviceTime: number;
+
+  // segundos de espera e de atendimento contando so o expediente da fila
+  @Column
+  waitTimeBusiness: number;
+
+  @Column
+  serviceTimeBusiness: number;
 }
 
 export default TicketTraking;

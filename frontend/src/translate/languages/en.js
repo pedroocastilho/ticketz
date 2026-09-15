@@ -110,8 +110,8 @@ const messages = {
         ticketsDone: "Resolved tickets",
         totalTickets: "Total tickets",
         newContacts: "New contacts",
-        avgServiceTime: "Average service time",
-        avgWaitTime: "Average wait time",
+        avgServiceTime: "Average service time (business hours)",
+        avgWaitTime: "Average wait time (business hours)",
         ticketsOnPeriod: "Tickets in the period",
         userCurrentStatus: "Current status",
         filter: {

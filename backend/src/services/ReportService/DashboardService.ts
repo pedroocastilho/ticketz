@@ -64,8 +64,9 @@ export async function calculateTicketStatistics(
 ): Promise<TicketTrackingStatistics> {
   const ticketStatistics = (await TicketTraking.findOne({
     attributes: [
-      [fn("AVG", col("waitTime")), "avgWaitTime"],
-      [fn("AVG", col("serviceTime")), "avgServiceTime"],
+      // medias contando so o expediente (ver helpers/businessSeconds.ts)
+      [fn("AVG", col("waitTimeBusiness")), "avgWaitTime"],
+      [fn("AVG", col("serviceTimeBusiness")), "avgServiceTime"],
       [fn("COUNT", col("id")), "totalClosed"]
     ],
     where: {
@@ -194,8 +195,14 @@ export async function userReport(companyId: number, start: Date, end: Date) {
     attributes: [
       "id",
       "name",
-      [fn("AVG", col("tickets.ticketTrakings.waitTime")), "avgWaitTime"],
-      [fn("AVG", col("tickets.ticketTrakings.serviceTime")), "avgServiceTime"],
+      [
+        fn("AVG", col("tickets.ticketTrakings.waitTimeBusiness")),
+        "avgWaitTime"
+      ],
+      [
+        fn("AVG", col("tickets.ticketTrakings.serviceTimeBusiness")),
+        "avgServiceTime"
+      ],
       [fn("COUNT", col("tickets.id")), "totalTickets"],
       [
         literal(`(

@@ -6,6 +6,7 @@ import Ticket from "../../models/Ticket";
 import ShowTicketService from "./ShowTicketService";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import FindOrCreateATicketTrakingService from "./FindOrCreateATicketTrakingService";
+import RefreshTicketTrakingBusinessTimes from "./RefreshTicketTrakingBusinessTimes";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import { startQueue, verifyMessage } from "../WbotServices/wbotMessageListener";
 import AppError from "../../errors/AppError";
@@ -271,6 +272,7 @@ const UpdateTicketService = async ({
           }
 
           ticketTraking.ratingAt = moment().toDate();
+          await RefreshTicketTrakingBusinessTimes(ticketTraking);
           await ticketTraking.save();
 
           await ticket.update({
@@ -414,6 +416,7 @@ const UpdateTicketService = async ({
       );
     }
 
+    await RefreshTicketTrakingBusinessTimes(ticketTraking);
     ticketTraking.save();
 
     if (
