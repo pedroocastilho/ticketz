@@ -1249,16 +1249,22 @@ export const startQueue = async (
       (!currentSchedule || currentSchedule.inActivity === false)
     ) {
       outOfHoursCache.set(`ticket-${ticket.id}`, true);
-      const outOfHoursMessage = pickLanguageVariant(
+      // fila com horario mas sem nenhuma mensagem (nem por regra do dia, nem a
+      // geral) fica em silencio: o numero pode ter a resposta automatica no
+      // proprio WhatsApp, e o horario continua valendo para os tempos do painel
+      const outOfHoursText =
         getTodayOutOfHoursMessage(queue.schedules) ||
-          queue.outOfHoursMessage?.trim() ||
-          "Estamos fora do horário de expediente",
-        await detectTicketLanguage(ticket.id)
-      );
-      const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
-        text: formatBody(outOfHoursMessage, ticket)
-      });
-      await verifyMessage(sentMessage, ticket, contact);
+        queue.outOfHoursMessage?.trim();
+      if (outOfHoursText) {
+        const outOfHoursMessage = pickLanguageVariant(
+          outOfHoursText,
+          await detectTicketLanguage(ticket.id)
+        );
+        const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
+          text: formatBody(outOfHoursMessage, ticket)
+        });
+        await verifyMessage(sentMessage, ticket, contact);
+      }
       const outOfHoursAction = await GetCompanySetting(
         companyId,
         "outOfHoursAction",
