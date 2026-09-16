@@ -342,7 +342,13 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
   try {
     let { number } = messageData;
     const { body, linkPreview } = messageData;
-    const saveOnTicket = !!messageData.saveOnTicket;
+    // saveOnTicket aceita boolean (salva no ticket, na fila padrao da conexao) ou o ID DA FILA em
+    // que o ticket deve nascer: o SendMessage faz Number(saveOnTicket) e usa como queueId. O "!!"
+    // antigo virava tudo em true (= fila 1), e a API nao conseguia escolher a fila.
+    const saveOnTicket: boolean | number =
+      Number(messageData.saveOnTicket) > 0
+        ? Number(messageData.saveOnTicket)
+        : !!messageData.saveOnTicket;
 
     if (!number.includes("@")) {
       const numberToTest = messageData.number;
