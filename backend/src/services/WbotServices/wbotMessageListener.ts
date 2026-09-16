@@ -1983,15 +1983,20 @@ const handleMessage = async (
           ) {
             if (!avoidResend) {
               outOfHoursCache.set(`ticket-${ticket.id}`, true);
-              const outOfHoursMessage = pickLanguageVariant(
-                whatsapp.outOfHoursMessage.trim() ||
-                  _t("We are out of office hours right now", ticket),
-                await detectTicketLanguage(ticket.id)
-              );
-              const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
-                text: formatBody(outOfHoursMessage, ticket)
-              });
-              await verifyMessage(sentMessage, ticket, ticket.contact);
+              // conexao sem mensagem gravada fica em silencio (mesma regra da
+              // fila): o atendente pode estar respondendo pelo celular e o
+              // texto fixo cairia no meio da conversa
+              const outOfHoursText = whatsapp.outOfHoursMessage?.trim();
+              if (outOfHoursText) {
+                const outOfHoursMessage = pickLanguageVariant(
+                  outOfHoursText,
+                  await detectTicketLanguage(ticket.id)
+                );
+                const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
+                  text: formatBody(outOfHoursMessage, ticket)
+                });
+                await verifyMessage(sentMessage, ticket, ticket.contact);
+              }
             }
             if (ticket.status !== "open") {
               await UpdateTicketService({
@@ -2021,16 +2026,22 @@ const handleMessage = async (
           ) {
             if (!avoidResend) {
               outOfHoursCache.set(`ticket-${ticket.id}`, true);
-              const outOfHoursMessage = pickLanguageVariant(
+              // ticket que ja esta na fila: mesma regra da entrada na fila,
+              // sem mensagem gravada (nem da regra do dia, nem a geral) nao
+              // manda o texto fixo, so aplica a acao
+              const outOfHoursText =
                 getTodayOutOfHoursMessage(queue.schedules) ||
-                  queue.outOfHoursMessage?.trim() ||
-                  _t("We are out of office hours right now", ticket),
-                await detectTicketLanguage(ticket.id)
-              );
-              const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
-                text: formatBody(outOfHoursMessage, ticket)
-              });
-              await verifyMessage(sentMessage, ticket, ticket.contact);
+                queue.outOfHoursMessage?.trim();
+              if (outOfHoursText) {
+                const outOfHoursMessage = pickLanguageVariant(
+                  outOfHoursText,
+                  await detectTicketLanguage(ticket.id)
+                );
+                const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
+                  text: formatBody(outOfHoursMessage, ticket)
+                });
+                await verifyMessage(sentMessage, ticket, ticket.contact);
+              }
             }
             if (ticket.status !== "open") {
               await UpdateTicketService({
