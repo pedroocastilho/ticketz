@@ -409,6 +409,11 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
         "MessageController.send: Failed to put message on queue"
       );
     }
+    // Erro conhecido (ERR_CHECK_NUMBER: numero nao esta no WhatsApp) volta com o proprio codigo;
+    // mascarar tudo como 500 escondia de quem chama a API o motivo real
+    if (err instanceof AppError) {
+      throw err;
+    }
     throw new AppError("ERR_INTERNAL_ERROR", 500);
   }
 };
