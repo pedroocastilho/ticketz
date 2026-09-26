@@ -4,6 +4,8 @@ import { logger } from "../../utils/logger";
 interface Request {
   number: string;
   body?: string;
+  // true quando quem escreveu foi um atendente pelo painel (nao o cliente)
+  atendente?: boolean;
 }
 
 // subconjunto do process.env que interessa aqui; o indice de string e o que
@@ -24,11 +26,14 @@ export const isDiamondWebhookEnabled = (
   env: WebhookEnv = process.env
 ): boolean => !!env.DIAMOND_WEBHOOK_URL && !!env.DIAMOND_WEBHOOK_TOKEN;
 
-// Repassa uma mensagem recebida do cliente para a API do Diamond Agentes.
+// Repassa para a API do Diamond Agentes a mensagem recebida do cliente e, com
+// atendente = true, a resposta que um atendente mandou pelo painel. Com a
+// segunda o agente de onboarding sabe que uma pessoa assumiu a conversa e para
+// de mandar mensagem para aquele cliente (antes os dois falavam ao mesmo tempo).
 // Fire-and-forget: falha vira log e devolve false, nunca lanca. Nao ha
 // retentativa nem fila de proposito — se isso virar problema, entra no Bull.
 const NotifyDiamondWebhook = async (
-  { number, body }: Request,
+  { number, body, atendente = false }: Request,
   env: WebhookEnv = process.env
 ): Promise<boolean> => {
   if (!isDiamondWebhookEnabled(env)) {
@@ -38,7 +43,9 @@ const NotifyDiamondWebhook = async (
   try {
     await axios.post(
       env.DIAMOND_WEBHOOK_URL,
-      { number, body: body || "", fromMe: false },
+      atendente
+        ? { number, body: body || "", fromMe: true, atendente: true }
+        : { number, body: body || "", fromMe: false },
       {
         headers: { "x-webhook-token": env.DIAMOND_WEBHOOK_TOKEN },
         timeout: TIMEOUT_MS

@@ -49,6 +49,27 @@ describe("NotifyDiamondWebhook", () => {
     );
   });
 
+  it("resposta de atendente vai marcada como fromMe e atendente", async () => {
+    mockedAxios.post.mockResolvedValue({ status: 200 });
+
+    const sent = await NotifyDiamondWebhook(
+      { number: "5491150073771", body: "Hola, soy Alberto", atendente: true },
+      env
+    );
+
+    expect(sent).toBe(true);
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      env.DIAMOND_WEBHOOK_URL,
+      {
+        number: "5491150073771",
+        body: "Hola, soy Alberto",
+        fromMe: true,
+        atendente: true
+      },
+      expect.anything()
+    );
+  });
+
   it("nao chama nada quando o webhook esta desligado", async () => {
     const sent = await NotifyDiamondWebhook(
       { number: "5511999990000", body: "oi" },

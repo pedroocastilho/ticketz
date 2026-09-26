@@ -28,6 +28,7 @@ import { verifyMessage } from "../services/WbotServices/wbotMessageListener";
 import { getJidOf } from "../services/WbotServices/getJidOf";
 import ShowContactService from "../services/ContactServices/ShowContactService";
 import { verifyContact } from "../services/WbotServices/verifyContact";
+import NotifyDiamondWebhook from "../services/WebhookServices/NotifyDiamondWebhook";
 
 type IndexQuery = {
   nextId?: string;
@@ -172,6 +173,16 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     }
   } else if (channel === "whatsapp") {
     await SendWhatsAppMessage({ body, ticket, userId, quotedMsg });
+  }
+
+  // Atendente respondeu pelo painel: avisa o Diamond Agentes para o agente de
+  // onboarding parar de falar com esse cliente. Sem await: nao atrasa o envio
+  if (channel === "whatsapp" && !ticket.isGroup && ticket.contact?.number) {
+    NotifyDiamondWebhook({
+      number: ticket.contact.number,
+      body: body || "[midia]",
+      atendente: true
+    });
   }
 
   return res.send();
