@@ -64,6 +64,12 @@ const NotificationsPopOver = props => {
 
   const historyRef = useRef(history);
 
+  // em ref para o handler do socket ver sempre o valor atual sem remontar
+  const silencedWhatsappIdsRef = useRef(props.silencedWhatsappIds || []);
+  useEffect(() => {
+    silencedWhatsappIdsRef.current = props.silencedWhatsappIds || [];
+  }, [props.silencedWhatsappIds]);
+
   const socketManager = useContext(SocketContext);
 
   function clearTicket(ticketId) {
@@ -161,11 +167,20 @@ const NotificationsPopOver = props => {
           return [data.ticket, ...prevState];
         });
 
+        // conexao silenciada por quem esta logado: a conversa continua
+        // aparecendo na lista e no contador, so nao toca som nem abre o aviso
+        // do navegador. Serve para quem acompanha varios numeros e so quer ser
+        // avisado do proprio.
+        const silenciada = silencedWhatsappIdsRef.current.includes(
+          data.ticket.whatsappId
+        );
+
         const shouldNotNotificate =
           (data.message.ticketId === ticketIdRef.current &&
             document.visibilityState === "visible") ||
           (data.ticket.userId && data.ticket.userId !== user?.id) ||
-          (data.ticket.isGroup && !soundGroupNotifications);
+          (data.ticket.isGroup && !soundGroupNotifications) ||
+          silenciada;
 
         if (shouldNotNotificate) return;
 

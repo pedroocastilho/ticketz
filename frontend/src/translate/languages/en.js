@@ -551,7 +551,9 @@ const messages = {
         }
       },
       notifications: {
-        noTickets: "No notifications."
+        noTickets: "No notifications.",
+        soundWhatsapps: "Play sound from:",
+        soundAllWhatsapps: "All connections"
       },
       quickMessages: {
         title: "Quick Responses",

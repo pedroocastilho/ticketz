@@ -520,7 +520,9 @@ const messages = {
         }
       },
       notifications: {
-        noTickets: "Nenhuma notificação."
+        noTickets: "Nenhuma notificação.",
+        soundWhatsapps: "Tocar som de:",
+        soundAllWhatsapps: "Todas as conexões"
       },
       quickMessages: {
         title: "Respostas Rápidas",

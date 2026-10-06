@@ -340,6 +340,19 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
   const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
 
+  // conexoes cujo som de notificacao a pessoa desligou, guardado no navegador
+  // dela igual o volume. Vazio = toca som de todas, que e o padrao de sempre.
+  const [silencedWhatsappIds, setSilencedWhatsappIds] = useState(() => {
+    try {
+      const guardado = JSON.parse(
+        localStorage.getItem("silencedWhatsappIds") || "[]"
+      );
+      return Array.isArray(guardado) ? guardado : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   const { dateToClient } = useDate();
 
   const socketManager = useContext(SocketContext);
@@ -654,9 +667,19 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
           <PhoneCall />
 
-          <NotificationsVolume setVolume={setVolume} volume={volume} />
+          <NotificationsVolume
+            setVolume={setVolume}
+            volume={volume}
+            silencedWhatsappIds={silencedWhatsappIds}
+            setSilencedWhatsappIds={setSilencedWhatsappIds}
+          />
 
-          {user.id && <NotificationsPopOver volume={volume} />}
+          {user.id && (
+            <NotificationsPopOver
+              volume={volume}
+              silencedWhatsappIds={silencedWhatsappIds}
+            />
+          )}
 
           <AnnouncementsPopover />
 
