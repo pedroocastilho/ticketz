@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import fs from "fs";
 import AppError from "../errors/AppError";
+import { isReadonlySupervisor } from "../helpers/ReadonlySupervisor";
 
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
@@ -72,7 +73,13 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     minUpdatedAt
   });
 
-  if (ticket.channel === "whatsapp" && markAsRead === "true") {
+  // supervisor somente leitura so olha: abrir a conversa nao pode zerar as
+  // nao lidas do vendedor nem mandar o "visto" para o cliente
+  if (
+    ticket.channel === "whatsapp" &&
+    markAsRead === "true" &&
+    !isReadonlySupervisor(req.user)
+  ) {
     SetTicketMessagesAsRead(ticket);
   }
 
@@ -181,7 +188,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     NotifyDiamondWebhook({
       number: ticket.contact.number,
       body: body || "[midia]",
-      atendente: true
+      atendente: true,
+      companyId: ticket.companyId
     });
   }
 

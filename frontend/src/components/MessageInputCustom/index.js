@@ -1088,8 +1088,10 @@ const MessageInputCustom = props => {
 
   const isGroup = showTabGroups && ticket.isGroup;
   // supervisor apenas acompanha conversa atribuida a outro atendente
+  // e o supervisor somente leitura (comercial) nunca escreve, nem em conversa aguardando
   const isSupervisorViewing =
-    user?.profile === "supervisor" && !!ticket.userId && ticket.userId !== user.id;
+    !!user?.readonlySupervisor ||
+    (user?.profile === "supervisor" && !!ticket.userId && ticket.userId !== user.id);
   const disableOption =
     (!isGroup && loading) ||
     recording ||

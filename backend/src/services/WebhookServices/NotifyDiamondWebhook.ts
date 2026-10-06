@@ -3,6 +3,8 @@ import { logger } from "../../utils/logger";
 
 interface Request {
   number: string;
+  // empresa do ticket: so as listadas em DIAMOND_WEBHOOK_COMPANIES repassam
+  companyId?: number;
   body?: string;
   // true quando quem escreveu foi um atendente pelo painel (nao o cliente)
   atendente?: boolean;
@@ -13,6 +15,7 @@ interface Request {
 interface WebhookEnv {
   DIAMOND_WEBHOOK_URL?: string;
   DIAMOND_WEBHOOK_TOKEN?: string;
+  DIAMOND_WEBHOOK_COMPANIES?: string;
   [key: string]: string | undefined;
 }
 
@@ -26,6 +29,21 @@ export const isDiamondWebhookEnabled = (
   env: WebhookEnv = process.env
 ): boolean => !!env.DIAMOND_WEBHOOK_URL && !!env.DIAMOND_WEBHOOK_TOKEN;
 
+// O Diamond Agentes e do SUPORTE. Com outras empresas na mesma instalacao (o
+// Comercial), as mensagens delas nao podem chegar ao agente de onboarding.
+// Padrao "1" = a empresa do suporte, o mesmo comportamento de antes.
+export const companyAllowed = (
+  companyId: number | undefined,
+  env: WebhookEnv = process.env
+): boolean => {
+  if (companyId === undefined || companyId === null) return true;
+  const lista = String(env.DIAMOND_WEBHOOK_COMPANIES || "1")
+    .split(",")
+    .map(s => Number(s.trim()))
+    .filter(n => Number.isInteger(n) && n > 0);
+  return lista.includes(Number(companyId));
+};
+
 // Repassa para a API do Diamond Agentes a mensagem recebida do cliente e, com
 // atendente = true, a resposta que um atendente mandou pelo painel. Com a
 // segunda o agente de onboarding sabe que uma pessoa assumiu a conversa e para
@@ -33,10 +51,10 @@ export const isDiamondWebhookEnabled = (
 // Fire-and-forget: falha vira log e devolve false, nunca lanca. Nao ha
 // retentativa nem fila de proposito — se isso virar problema, entra no Bull.
 const NotifyDiamondWebhook = async (
-  { number, body, atendente = false }: Request,
+  { number, body, atendente = false, companyId }: Request,
   env: WebhookEnv = process.env
 ): Promise<boolean> => {
-  if (!isDiamondWebhookEnabled(env)) {
+  if (!isDiamondWebhookEnabled(env) || !companyAllowed(companyId, env)) {
     return false;
   }
 

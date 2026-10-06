@@ -39,6 +39,7 @@ import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketServi
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import ScheduleAutoReply from "../AutoReplyServices/ScheduleAutoReply";
 import NotifyDiamondWebhook from "../WebhookServices/NotifyDiamondWebhook";
+import NotifyCrmWebhook from "../WebhookServices/NotifyCrmWebhook";
 import HandleReplyFromPhone from "../../helpers/HandleReplyFromPhone";
 import UpdateTicketService, {
   UpdateTicketData
@@ -1950,6 +1951,32 @@ const handleMessage = async (
       });
     }
 
+    // avisa o CRM (so empresas ligadas em CRM_WEBHOOK_COMPANIES): toda
+    // mensagem do cliente e a primeira mensagem de uma conversa que o vendedor
+    // abriu pelo celular. Fica antes do retorno de grupo/disableBot/fromMe de
+    // proposito. Sem await: o CRM nunca atrasa o atendimento
+    if (
+      !isGroup &&
+      !findOnly &&
+      (!msg.key.fromMe || (justCreated && upsertType === "notify"))
+    ) {
+      NotifyCrmWebhook({
+        companyId,
+        fromMe: !!msg.key.fromMe,
+        body: bodyMessage,
+        justCreated,
+        ticket: {
+          id: ticket.id,
+          uuid: ticket.uuid,
+          status: ticket.status,
+          queueId: ticket.queueId,
+          userId: ticket.userId
+        },
+        whatsapp: { id: whatsapp.id, name: whatsapp.name },
+        contact: { id: contact.id, name: contact.name, number: contact.number }
+      });
+    }
+
     if (isGroup || contact.disableBot || msg.key.fromMe) {
       if (ticket.chatbot) {
         await updateTicket(ticket, { chatbot: false });
@@ -2084,7 +2111,11 @@ const handleMessage = async (
 
       // repassa a mensagem do cliente para a API do Diamond Agentes. Sem
       // await de proposito: a entrega nao pode atrasar o atendimento
-      NotifyDiamondWebhook({ number: contact.number, body: bodyMessage });
+      NotifyDiamondWebhook({
+        number: contact.number,
+        body: bodyMessage,
+        companyId
+      });
     }
 
     if (

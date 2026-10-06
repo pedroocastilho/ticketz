@@ -2,6 +2,10 @@ import { verify } from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 import AppError from "../errors/AppError";
 import authConfig from "../config/auth";
+import {
+  isAllowedForReadonly,
+  isReadonlySupervisor
+} from "../helpers/ReadonlySupervisor";
 
 interface TokenPayload {
   id: string;
@@ -38,6 +42,16 @@ const isAuth = (req: Request, res: Response, next: NextFunction): void => {
     req.companyId = tokenData.companyId;
   } catch (err) {
     throw new AppError("ERR_SESSION_EXPIRED", 403, "debug");
+  }
+
+  // supervisor somente leitura (empresas em SUPERVISOR_READONLY_COMPANIES):
+  // qualquer acao que altera algo e recusada aqui, num ponto so, em vez de
+  // depender de cada rota lembrar de checar
+  if (
+    isReadonlySupervisor(req.user) &&
+    !isAllowedForReadonly(req.method, req.originalUrl, req.user.id)
+  ) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
   return next();

@@ -102,6 +102,16 @@ const TicketActionButtonsCustom = ({ ticket, showTabGroups }) => {
       });
   };
 
+  // supervisor somente leitura (comercial): acompanha, mas nao aceita,
+  // transfere nem encerra; o backend tambem recusa
+  if (user?.readonlySupervisor) {
+    return (
+      <div className={classes.actionButtons}>
+        <span style={{ fontSize: 12, opacity: 0.7 }}>Somente leitura</span>
+      </div>
+    );
+  }
+
   return (
     <div className={classes.actionButtons}>
       {ticket.status === "closed" && (!showTabGroups || !ticket.isGroup) && (

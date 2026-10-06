@@ -1,5 +1,6 @@
 import axios from "axios";
 import NotifyDiamondWebhook, {
+  companyAllowed,
   isDiamondWebhookEnabled
 } from "../../services/WebhookServices/NotifyDiamondWebhook";
 
@@ -41,7 +42,11 @@ describe("NotifyDiamondWebhook", () => {
     expect(mockedAxios.post).toHaveBeenCalledTimes(1);
     expect(mockedAxios.post).toHaveBeenCalledWith(
       env.DIAMOND_WEBHOOK_URL,
-      { number: "5511999990000", body: "Oi, quero um reembolso", fromMe: false },
+      {
+        number: "5511999990000",
+        body: "Oi, quero um reembolso",
+        fromMe: false
+      },
       expect.objectContaining({
         headers: { "x-webhook-token": "token-secreto" },
         timeout: 5000
@@ -83,7 +88,10 @@ describe("NotifyDiamondWebhook", () => {
   it("manda body vazio quando a mensagem nao tem texto", async () => {
     mockedAxios.post.mockResolvedValue({ status: 200 });
 
-    await NotifyDiamondWebhook({ number: "5511999990000", body: undefined }, env);
+    await NotifyDiamondWebhook(
+      { number: "5511999990000", body: undefined },
+      env
+    );
 
     expect(mockedAxios.post.mock.calls[0][1]).toEqual({
       number: "5511999990000",
@@ -98,5 +106,34 @@ describe("NotifyDiamondWebhook", () => {
     await expect(
       NotifyDiamondWebhook({ number: "5511999990000", body: "oi" }, env)
     ).resolves.toBe(false);
+  });
+});
+
+describe("NotifyDiamondWebhook por empresa", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("padrao: so a empresa 1 (suporte) repassa", async () => {
+    mockedAxios.post.mockResolvedValue({ status: 200 });
+    expect(companyAllowed(1, env)).toBe(true);
+    expect(companyAllowed(2, env)).toBe(false);
+    const sent = await NotifyDiamondWebhook(
+      { number: "5573999990000", body: "oi", companyId: 2 },
+      env
+    );
+    expect(sent).toBe(false);
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+  });
+
+  it("lista explicita em DIAMOND_WEBHOOK_COMPANIES manda", () => {
+    expect(
+      companyAllowed(3, { ...env, DIAMOND_WEBHOOK_COMPANIES: "1,3" })
+    ).toBe(true);
+    expect(
+      companyAllowed(2, { ...env, DIAMOND_WEBHOOK_COMPANIES: "1,3" })
+    ).toBe(false);
+  });
+
+  it("chamada sem companyId continua como antes", () => {
+    expect(companyAllowed(undefined, env)).toBe(true);
   });
 });

@@ -373,6 +373,7 @@ const TicketListItemCustom = ({ ticket, setTabOpen, groupActionButtons }) => {
             />
           )}
           {ticket.status === "pending" &&
+            !user?.readonlySupervisor &&
             (groupActionButtons || !ticket.isGroup) && (
               <Tooltip title="Fechar Conversa">
                 <ClearOutlinedIcon
@@ -404,6 +405,7 @@ const TicketListItemCustom = ({ ticket, setTabOpen, groupActionButtons }) => {
             </Tooltip>
           )}
           {ticket.status === "open" &&
+            !user?.readonlySupervisor &&
             (groupActionButtons || !ticket.isGroup) && (
               <Tooltip title="Fechar Conversa">
                 <ClearOutlinedIcon
@@ -421,6 +423,7 @@ const TicketListItemCustom = ({ ticket, setTabOpen, groupActionButtons }) => {
               </Tooltip>
             )}
           {ticket.status === "pending" &&
+            !user?.readonlySupervisor &&
             (groupActionButtons || !ticket.isGroup) && (
               <Tooltip title="Aceitar Conversa">
                 <DoneIcon
