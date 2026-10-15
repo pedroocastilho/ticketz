@@ -21,6 +21,7 @@ import ContactListItems from "../pages/ContactListItems/";
 // import Companies from "../pages/Companies/";
 import QuickMessages from "../pages/QuickMessages/";
 import AutoReplyRules from "../pages/AutoReplyRules/";
+import AbrirConversa from "../pages/AbrirConversa";
 import { AuthProvider } from "../context/Auth/AuthContext";
 import { TicketsContextProvider } from "../context/Tickets/TicketsContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
@@ -59,6 +60,13 @@ const Routes = () => {
                   exact
                   path="/tickets/:ticketId?"
                   component={TicketResponsiveContainer}
+                  isPrivate
+                />
+                {/* botao "Chamar no WhatsApp" do CRM */}
+                <Route
+                  exact
+                  path="/abrir/:numero"
+                  component={AbrirConversa}
                   isPrivate
                 />
                 <Route

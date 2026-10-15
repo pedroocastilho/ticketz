@@ -155,7 +155,17 @@ const useAuth = () => {
     } else {
       toast.success(i18n.t("auth.toasts.success"));
     }
-    if (data.user.profile === "admin" && !data.user.hideAdminUI) {
+    // link aberto antes do login (ex.: botao "Chamar no WhatsApp" do CRM)
+    let destino = null;
+    try {
+      destino = sessionStorage.getItem("destinoAposLogin");
+      sessionStorage.removeItem("destinoAposLogin");
+    } catch (e) {
+      destino = null;
+    }
+    if (destino && destino.startsWith("/") && !destino.startsWith("//")) {
+      history.push(destino);
+    } else if (data.user.profile === "admin" && !data.user.hideAdminUI) {
       history.push("/");
     } else {
       history.push("/tickets");
