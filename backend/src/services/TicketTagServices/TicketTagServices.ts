@@ -4,6 +4,7 @@ import Ticket from "../../models/Ticket";
 import TicketTag from "../../models/TicketTag";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import { websocketUpdateTicket } from "../TicketServices/UpdateTicketService";
+import NotifyCrmTagsChanged from "../WebhookServices/NotifyCrmTagsChanged";
 
 export async function ticketTagAdd(
   ticketId: number,
@@ -39,6 +40,7 @@ export async function ticketTagAdd(
 
   await ticket.reload();
   websocketUpdateTicket(ticket);
+  NotifyCrmTagsChanged({ companyId: ticket.companyId, ticketId: ticket.id });
 
   return ticketTag;
 }
@@ -66,6 +68,7 @@ export async function ticketTagRemove(
 
   await ticket.reload();
   websocketUpdateTicket(ticket);
+  NotifyCrmTagsChanged({ companyId: ticket.companyId, ticketId: ticket.id });
 }
 
 export async function ticketTagRemoveAll(ticketId: number, companyId?: number) {
@@ -86,4 +89,5 @@ export async function ticketTagRemoveAll(ticketId: number, companyId?: number) {
 
   await ticket.reload();
   websocketUpdateTicket(ticket);
+  NotifyCrmTagsChanged({ companyId: ticket.companyId, ticketId: ticket.id });
 }

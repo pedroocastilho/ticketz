@@ -1,6 +1,7 @@
 import axios from "axios";
 import NotifyCrmWebhook, {
-  isCrmWebhookEnabledFor
+  isCrmWebhookEnabledFor,
+  isRecentMessage
 } from "../../services/WebhookServices/NotifyCrmWebhook";
 
 jest.mock("axios");
@@ -57,7 +58,10 @@ describe("NotifyCrmWebhook", () => {
   it("manda ticket, conexao e contato com o token no header", async () => {
     mockedAxios.post.mockResolvedValue({ status: 200 });
 
-    const sent = await NotifyCrmWebhook(mensagem(), env);
+    const sent = await NotifyCrmWebhook(
+      mensagem(2, { messageAt: Date.UTC(2026, 9, 15, 13, 0, 0) }),
+      env
+    );
 
     expect(sent).toBe(true);
     expect(mockedAxios.post).toHaveBeenCalledWith(
@@ -67,6 +71,8 @@ describe("NotifyCrmWebhook", () => {
         companyId: 2,
         fromMe: false,
         body: "Oi, vi o anuncio",
+        messageAt: "2026-10-15T13:00:00.000Z",
+        etiquetas: [],
         ticket: {
           id: 10,
           uuid: "uuid-10",
@@ -94,5 +100,55 @@ describe("NotifyCrmWebhook", () => {
   it("falha de rede vira false e nao lanca", async () => {
     mockedAxios.post.mockRejectedValue(new Error("ECONNREFUSED"));
     await expect(NotifyCrmWebhook(mensagem(), env)).resolves.toBe(false);
+  });
+
+  it("resposta do vendedor vai com fromMe e o horario da mensagem", async () => {
+    mockedAxios.post.mockResolvedValue({ status: 200 });
+    await NotifyCrmWebhook(
+      mensagem(2, {
+        fromMe: true,
+        justCreated: false,
+        messageAt: new Date("2026-10-15T13:05:00.000Z")
+      }),
+      env
+    );
+    const payload = mockedAxios.post.mock.calls[0][1] as Record<
+      string,
+      unknown
+    >;
+    expect(payload.fromMe).toBe(true);
+    expect(payload.messageAt).toBe("2026-10-15T13:05:00.000Z");
+  });
+
+  it("evento de etiqueta leva a lista completa atual", async () => {
+    mockedAxios.post.mockResolvedValue({ status: 200 });
+    await NotifyCrmWebhook(
+      mensagem(2, {
+        evento: "etiqueta",
+        body: undefined,
+        etiquetas: ["LIVE", "COMUNIDADE"]
+      }),
+      env
+    );
+    const payload = mockedAxios.post.mock.calls[0][1] as Record<
+      string,
+      unknown
+    >;
+    expect(payload.evento).toBe("etiqueta");
+    expect(payload.etiquetas).toEqual(["LIVE", "COMUNIDADE"]);
+    expect(payload.body).toBe("");
+  });
+});
+
+describe("isRecentMessage", () => {
+  const agora = Date.UTC(2026, 9, 15, 13, 0, 0);
+  it("aceita mensagem de ate 10 minutos atras", () => {
+    expect(isRecentMessage(agora, agora)).toBe(true);
+    expect(isRecentMessage(agora - 9 * 60 * 1000, agora)).toBe(true);
+  });
+  it("recusa historico antigo reenviado na reconexao", () => {
+    expect(isRecentMessage(agora - 11 * 60 * 1000, agora)).toBe(false);
+    expect(isRecentMessage(agora - 3 * 86400 * 1000, agora)).toBe(false);
+    expect(isRecentMessage(NaN, agora)).toBe(false);
   });
 });

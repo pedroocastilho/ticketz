@@ -1,17 +1,25 @@
 import axios from "axios";
 import { logger } from "../../utils/logger";
 
-// Aviso para o CRM (Magnus/Twenty, via n8n) de que chegou mensagem numa
-// conversa: o CRM cria o lead com dono = vendedor dono do numero e guarda o
-// link da conversa no negocio.
+// Aviso para o CRM (Magnus/Twenty, via n8n) do que acontece numa conversa:
+//   - evento "mensagem": mensagem do cliente (o CRM cria o lead com dono =
+//     vendedor dono do numero e guarda o link da conversa) e resposta do
+//     vendedor, pelo painel ou pelo celular (o CRM anda o card);
+//   - evento "etiqueta": as etiquetas da conversa mudaram (o CRM grava origem,
+//     produto ou tira do funil com "Nao e lead"). Vai a lista completa atual.
 //
 // So vale para as empresas listadas em CRM_WEBHOOK_COMPANIES (ids separados
 // por virgula). Sem URL, token ou lista o recurso fica desligado: o suporte,
 // que esta na mesma instalacao, nunca manda nada para o CRM.
 
 interface Request {
+  evento?: "mensagem" | "etiqueta";
   companyId: number;
-  fromMe: boolean;
+  fromMe?: boolean;
+  // hora da mensagem (o CRM usa para os carimbos; padrao = agora)
+  messageAt?: Date | number | null;
+  // evento "etiqueta": nomes das etiquetas que a conversa tem agora
+  etiquetas?: string[];
   body?: string;
   ticket: {
     id: number;
@@ -20,7 +28,7 @@ interface Request {
     queueId?: number | null;
     userId?: number | null;
   };
-  justCreated: boolean;
+  justCreated?: boolean;
   whatsapp: { id: number; name?: string };
   contact: { id?: number; name?: string; number: string };
 }
@@ -49,6 +57,16 @@ export const isCrmWebhookEnabledFor = (
   !!env.CRM_WEBHOOK_TOKEN &&
   empresasLigadas(env).includes(Number(companyId));
 
+// Resposta do vendedor so conta se aconteceu agora (10 min de folga para o
+// atraso de entrega). Mensagem antiga reenviada na reconexao fica de fora.
+const JANELA_RECENTE_MS = 10 * 60 * 1000;
+
+export const isRecentMessage = (
+  messageAtMs: number,
+  agoraMs: number = Date.now()
+): boolean =>
+  Number.isFinite(messageAtMs) && agoraMs - messageAtMs <= JANELA_RECENTE_MS;
+
 // Fire-and-forget: falha vira log e devolve false, nunca lanca. O atendimento
 // nao pode esperar nem quebrar por causa do CRM.
 const NotifyCrmWebhook = async (
@@ -59,11 +77,19 @@ const NotifyCrmWebhook = async (
     return false;
   }
 
+  const momento =
+    data.messageAt instanceof Date
+      ? data.messageAt
+      : new Date(data.messageAt ? Number(data.messageAt) : Date.now());
   const payload = {
-    evento: "mensagem",
+    evento: data.evento || "mensagem",
     companyId: data.companyId,
     fromMe: !!data.fromMe,
     body: data.body || "",
+    messageAt: Number.isNaN(momento.getTime())
+      ? new Date().toISOString()
+      : momento.toISOString(),
+    etiquetas: data.etiquetas || [],
     ticket: {
       id: data.ticket.id,
       uuid: data.ticket.uuid,

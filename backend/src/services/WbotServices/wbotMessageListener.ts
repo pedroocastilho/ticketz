@@ -39,7 +39,9 @@ import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketServi
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import ScheduleAutoReply from "../AutoReplyServices/ScheduleAutoReply";
 import NotifyDiamondWebhook from "../WebhookServices/NotifyDiamondWebhook";
-import NotifyCrmWebhook from "../WebhookServices/NotifyCrmWebhook";
+import NotifyCrmWebhook, {
+  isRecentMessage
+} from "../WebhookServices/NotifyCrmWebhook";
 import HandleReplyFromPhone from "../../helpers/HandleReplyFromPhone";
 import UpdateTicketService, {
   UpdateTicketData
@@ -1952,17 +1954,26 @@ const handleMessage = async (
     }
 
     // avisa o CRM (so empresas ligadas em CRM_WEBHOOK_COMPANIES): toda
-    // mensagem do cliente e a primeira mensagem de uma conversa que o vendedor
-    // abriu pelo celular. Fica antes do retorno de grupo/disableBot/fromMe de
-    // proposito. Sem await: o CRM nunca atrasa o atendimento
+    // mensagem do cliente e toda resposta do vendedor, pelo celular ("notify")
+    // ou pelo painel ("append"). Resposta do vendedor so se for recente: ao
+    // reconectar, o WhatsApp reenvia o historico como "append" e isso nao pode
+    // andar card nem contar como resposta. Fica antes do retorno de
+    // grupo/disableBot/fromMe de proposito. Sem await: o CRM nunca atrasa o
+    // atendimento
+    const messageAt = msg.messageTimestamp
+      ? Number(msg.messageTimestamp) * 1000
+      : Date.now();
     if (
       !isGroup &&
       !findOnly &&
-      (!msg.key.fromMe || (justCreated && upsertType === "notify"))
+      (!msg.key.fromMe ||
+        (["notify", "append"].includes(upsertType) &&
+          isRecentMessage(messageAt)))
     ) {
       NotifyCrmWebhook({
         companyId,
         fromMe: !!msg.key.fromMe,
+        messageAt,
         body: bodyMessage,
         justCreated,
         ticket: {

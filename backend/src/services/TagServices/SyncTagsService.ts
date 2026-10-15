@@ -9,6 +9,7 @@ import ShowContactService from "../ContactServices/ShowContactService";
 import { websocketUpdateContact } from "../ContactServices/UpdateContactService";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import { websocketUpdateTicket } from "../TicketServices/UpdateTicketService";
+import NotifyCrmTagsChanged from "../WebhookServices/NotifyCrmTagsChanged";
 
 interface Request {
   tags: Tag[];
@@ -40,6 +41,7 @@ const SyncTicketTags = async ({
 
   await ticket.reload();
   websocketUpdateTicket(ticket);
+  NotifyCrmTagsChanged({ companyId: ticket.companyId, ticketId: ticket.id });
 
   return ticket;
 };
@@ -64,6 +66,7 @@ const SyncContactTags = async ({
 
   await contact.reload();
   websocketUpdateContact(contact);
+  NotifyCrmTagsChanged({ companyId: contact.companyId, contactId: contact.id });
 
   return contact;
 };
