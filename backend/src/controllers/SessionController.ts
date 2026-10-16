@@ -3,7 +3,10 @@ import AppError from "../errors/AppError";
 import { getIO } from "../libs/socket";
 
 import AuthUserService from "../services/UserServices/AuthUserService";
-import { SendRefreshToken } from "../helpers/SendRefreshToken";
+import {
+  ClearRefreshToken,
+  SendRefreshToken
+} from "../helpers/SendRefreshToken";
 import { RefreshTokenService } from "../services/AuthServices/RefreshTokenService";
 import FindUserFromToken from "../services/AuthServices/FindUserFromToken";
 import User from "../models/User";
@@ -92,7 +95,7 @@ export const remove = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  res.clearCookie("jrt");
+  ClearRefreshToken(res);
 
   return res.send();
 };

@@ -2,6 +2,7 @@ import { Response as Res } from "express";
 
 import User from "../../models/User";
 import AppError from "../../errors/AppError";
+import { ClearRefreshToken } from "../../helpers/SendRefreshToken";
 import ShowUserService from "../UserServices/ShowUserService";
 import {
   createAccessToken,
@@ -35,7 +36,7 @@ export const RefreshTokenService = async (
     const user = await ShowUserService(id);
 
     if (user.tokenVersion !== tokenVersion) {
-      res.clearCookie("jrt");
+      ClearRefreshToken(res);
       throw new AppError("ERR_SESSION_EXPIRED", 401);
     }
 
@@ -52,7 +53,7 @@ export const RefreshTokenService = async (
 
     return { user, newToken, refreshToken };
   } catch {
-    res.clearCookie("jrt");
+    ClearRefreshToken(res);
     throw new AppError("ERR_SESSION_EXPIRED", 401);
   }
 };
