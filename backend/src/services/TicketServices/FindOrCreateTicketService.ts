@@ -9,6 +9,7 @@ import { GetCompanySetting } from "../../helpers/CheckSettings";
 import sequelize from "../../database";
 import Whatsapp from "../../models/Whatsapp";
 import Queue from "../../models/Queue";
+import QueueOption from "../../models/QueueOption";
 import { incrementCounter } from "../CounterServices/IncrementCounter";
 
 const createTicketMutex = new Mutex();
@@ -19,6 +20,20 @@ type FindOrCreateTicketOptions = {
   doNotReopen?: boolean;
   findOnly?: boolean;
   queue?: Queue;
+};
+
+// Fila com menu de chatbot precisa recomecar o menu quando a conversa e
+// reaberta. Sem isso o ticket volta como "aguardando" com chatbot desligado:
+// num numero so de bot, o cliente que escreve dias depois nao recebe o menu
+// nem cai para um atendente, e fica sem resposta nenhuma.
+const queueHasChatbot = async (queueId: number | null): Promise<boolean> => {
+  if (!queueId) {
+    return false;
+  }
+  const total = await QueueOption.count({
+    where: { queueId, parentId: null }
+  });
+  return total > 0;
 };
 
 const internalFindOrCreateTicketService = async (
@@ -100,9 +115,16 @@ const internalFindOrCreateTicketService = async (
         }));
 
       if (ticket) {
+        // zerar a fila faz a conversa reaberta passar de novo pelo verifyQueue,
+        // que reenvia o menu do comeco, igual a uma conversa nova
+        const restartChatbot = await queueHasChatbot(ticket.queueId);
+
         await ticket.update({
           status: "pending",
           userId: null,
+          ...(restartChatbot
+            ? { queueId: null, chatbot: false, queueOptionId: null }
+            : {}),
           unreadMessages: incrementUnread
             ? ticket.unreadMessages + 1
             : ticket.unreadMessages,

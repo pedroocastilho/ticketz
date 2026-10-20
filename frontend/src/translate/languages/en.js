@@ -772,6 +772,9 @@ const messages = {
         longerInterval: "Longer Interval (seconds)",
         addVariable: "Add Variable"
       },
+      queueOptions: {
+        closeTicket: "Close ticket"
+      },
       queues: {
         title: "Queues & Chatbot",
         table: {

@@ -1579,7 +1579,11 @@ const handleChartbot = async (
       );
     }
 
-    if (currentOption.exitChatbot || currentOption.forwardQueueId) {
+    if (
+      currentOption.exitChatbot ||
+      currentOption.forwardQueueId ||
+      currentOption.closeTicket
+    ) {
       const text = formatBody(`${currentOption.message.trim()}`, ticket);
 
       if (filePath) {
@@ -1593,7 +1597,18 @@ const handleChartbot = async (
         await verifyMessage(sendMsg, ticket, ticket.contact);
       }
 
-      if (currentOption.exitChatbot) {
+      if (currentOption.closeTicket) {
+        // fim de fluxo do bot: ja respondeu tudo que tinha para responder,
+        // entao fecha. justClose para nao mandar a mensagem de conclusao da
+        // conexao logo depois do texto da opcao, que soaria como duas
+        // despedidas seguidas.
+        await updateTicket(ticket, {
+          chatbot: false,
+          queueOptionId: null,
+          status: "closed",
+          justClose: true
+        });
+      } else if (currentOption.exitChatbot) {
         await updateTicket(ticket, {
           chatbot: false,
           queueOptionId: null

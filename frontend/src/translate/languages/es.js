@@ -769,6 +769,9 @@ const messages = {
         longerInterval: "Intervalo mayor (segundos)",
         addVariable: "Agregar variable"
       },
+      queueOptions: {
+        closeTicket: "Finalizar la atención"
+      },
       queues: {
         title: "Colas y Chatbot",
         table: {

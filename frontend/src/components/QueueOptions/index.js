@@ -214,6 +214,18 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
     options[index].exitChatbot = !options[index].exitChatbot;
     if (options[index].exitChatbot) {
       options[index].forwardQueueId = "";
+      options[index].closeTicket = false;
+    }
+    updateOptions();
+  };
+
+  // encerrar o atendimento e o fim de um fluxo de bot: nao faz sentido junto
+  // com sair do chatbot nem com encaminhar para outra fila
+  const handleToggleCloseTicket = (event, index) => {
+    options[index].closeTicket = !options[index].closeTicket;
+    if (options[index].closeTicket) {
+      options[index].exitChatbot = false;
+      options[index].forwardQueueId = "";
     }
     updateOptions();
   };
@@ -223,6 +235,7 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
     options[index].forwardQueueId = `${value}`;
     if (options[index].forwardQueueId) {
       options[index].exitChatbot = false;
+      options[index].closeTicket = false;
     }
     updateOptions();
   };
@@ -351,7 +364,10 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
                 control={
                   <Switch
                     checked={option.exitChatbot}
-                    disabled={option.forwardQueueId && !option.exitChatbot}
+                    disabled={
+                      (option.forwardQueueId || option.closeTicket) &&
+                      !option.exitChatbot
+                    }
                     color="primary"
                     onChange={event => handleToggleExitChatbot(event, index)}
                     name="exitChatbot"
@@ -372,7 +388,10 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
                   }
                   label="Select queue"
                   size="small"
-                  disabled={option.exitChatbot && !option.forwardQueueId}
+                  disabled={
+                    (option.exitChatbot || option.closeTicket) &&
+                    !option.forwardQueueId
+                  }
                 >
                   <MenuItem key="noqueue" value="">
                     None
@@ -384,6 +403,31 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
                   ))}
                 </Select>
               </FormControl>
+            </Grid>
+
+            <Grid
+              className={classes.verticalCenter}
+              xs={12}
+              sm={12}
+              md={3}
+              item
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={!!option.closeTicket}
+                    disabled={
+                      (option.exitChatbot || option.forwardQueueId) &&
+                      !option.closeTicket
+                    }
+                    color="primary"
+                    onChange={event => handleToggleCloseTicket(event, index)}
+                    name="closeTicket"
+                    size="small"
+                  />
+                }
+                label={i18n.t("queueOptions.closeTicket")}
+              />
             </Grid>
           </Grid>
         </>

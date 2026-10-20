@@ -75,6 +75,11 @@ class QueueOption extends Model<QueueOption> {
   @Column
   exitChatbot: boolean;
 
+  // encerra o atendimento depois de enviar a mensagem desta opcao, sem passar
+  // por atendente. Fim de fluxo de bot: nao sobra nada para alguem fazer.
+  @Column
+  closeTicket: boolean;
+
   @CreatedAt
   createdAt: Date;
 

@@ -7,6 +7,9 @@ interface QueueData {
   option?: string;
   message?: string;
   parentId?: number;
+  exitChatbot?: boolean;
+  forwardQueueId?: number;
+  closeTicket?: boolean;
 }
 
 const UpdateService = async (
