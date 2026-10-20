@@ -39,6 +39,7 @@ import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketServi
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import ScheduleAutoReply from "../AutoReplyServices/ScheduleAutoReply";
 import NotifyDiamondWebhook from "../WebhookServices/NotifyDiamondWebhook";
+import NotifyHumanHandoff from "./NotifyHumanHandoff";
 import NotifyCrmWebhook, {
   isRecentMessage
 } from "../WebhookServices/NotifyCrmWebhook";
@@ -1613,6 +1614,10 @@ const handleChartbot = async (
           chatbot: false,
           queueOptionId: null
         });
+        // o ticket so fica pendente na fila: ninguem e avisado. Num numero em
+        // que o bot atende e a pessoa entra so quando chamam, isso significava
+        // cliente esperando em silencio. O aviso nunca lanca.
+        await NotifyHumanHandoff({ wbot, ticket, option: currentOption });
       } else if (currentOption.forwardQueueId) {
         await updateTicket(ticket, {
           queueOptionId: null,
