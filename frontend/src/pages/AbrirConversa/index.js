@@ -14,7 +14,7 @@ const MENSAGENS = {
   ERR_CRM_NUMERO_INVALIDO: "O numero do link nao e valido.",
   ERR_CRM_SEM_FILA: "Seu usuario nao tem fila: fale com o gestor.",
   ERR_CHECK_NUMBER: "Esse numero nao tem WhatsApp.",
-  ERR_WAPP_NOT_CONNECTED: "O seu numero de WhatsApp esta desconectado: fale com o gestor para conectar.",
+  ERR_WAPP_NOT_CONNECTED: "O seu numero de WhatsApp esta desconectado.",
   ERR_NO_WAPP_FOUND: "Nao achei o seu numero de WhatsApp: fale com o gestor.",
   ERR_NO_DEF_WAPP_FOUND: "Nao achei o seu numero de WhatsApp: fale com o gestor."
 };
@@ -25,6 +25,7 @@ const AbrirConversa = () => {
   const history = useHistory();
   const { user } = useContext(AuthContext);
   const [erro, setErro] = useState(null);
+  const [codigoErro, setCodigoErro] = useState(null);
   const jaPediu = useRef(false);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ const AbrirConversa = () => {
       .then(({ data }) => history.replace(`/tickets/${data.uuid}`))
       .catch(err => {
         const codigo = err?.response?.data?.error || err?.response?.data?.message;
+        setCodigoErro(codigo || null);
         setErro(MENSAGENS[codigo] || `Nao consegui abrir a conversa (${codigo || "erro"}).`);
       });
   }, [user, numero, location.search, history]);
@@ -62,6 +64,16 @@ const AbrirConversa = () => {
           >
             Ir para as conversas
           </Button>
+          {codigoErro === "ERR_WAPP_NOT_CONNECTED" && user?.conexaoPropria && (
+            <Button
+              style={{ marginTop: 16, marginLeft: 8 }}
+              variant="contained"
+              color="secondary"
+              onClick={() => history.push("/meu-numero")}
+            >
+              Conectar meu numero
+            </Button>
+          )}
         </>
       )}
     </Paper>

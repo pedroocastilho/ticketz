@@ -9,6 +9,7 @@ import Divider from "@material-ui/core/Divider";
 import { Badge, Collapse, List } from "@material-ui/core";
 import DashboardOutlinedIcon from "@material-ui/icons/DashboardOutlined";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
+import PhonelinkRingIcon from "@material-ui/icons/PhonelinkRing";
 import SyncAltIcon from "@material-ui/icons/SyncAlt";
 import SettingsOutlinedIcon from "@material-ui/icons/SettingsOutlined";
 import PeopleAltOutlinedIcon from "@material-ui/icons/PeopleAltOutlined";
@@ -140,6 +141,10 @@ const MainListItems = props => {
   const { whatsApps } = useContext(WhatsAppsContext);
   const { user, handleLogout } = useContext(AuthContext);
   const [connectionWarning, setConnectionWarning] = useState(false);
+  // "Meu numero" (CONEXAO_PROPRIA_COMPANIES): item para quem nao e admin, com
+  // "!" quando algum numero dele nao esta conectado (confere a cada 60 s)
+  const mostrarMeuNumero = !!user.conexaoPropria && user.profile !== "admin";
+  const [meuNumeroCaido, setMeuNumeroCaido] = useState(false);
   const [openCampaignSubmenu, setOpenCampaignSubmenu] = useState(false);
   const [openKanbanSubmenu, setOpenKanbanSubmenu] = useState(false);
 
@@ -202,6 +207,26 @@ const MainListItems = props => {
       setInvisible(true);
     }
   }, [chats, user.id]);
+
+  useEffect(() => {
+    if (!mostrarMeuNumero) return undefined;
+    let ativo = true;
+    const conferir = async () => {
+      if (document.hidden) return;
+      try {
+        const { data } = await api.get("/minhas-conexoes");
+        if (ativo) setMeuNumeroCaido(data.some(c => c.status !== "CONNECTED"));
+      } catch (err) {
+        // sem aviso: o item continua no menu e a tela mostra o erro
+      }
+    };
+    conferir();
+    const timer = setInterval(conferir, 60000);
+    return () => {
+      ativo = false;
+      clearInterval(timer);
+    };
+  }, [mostrarMeuNumero]);
 
   useEffect(() => {
     if (localStorage.getItem("cshow")) {
@@ -276,6 +301,17 @@ const MainListItems = props => {
                 primary={i18n.t("mainDrawer.listItems.tickets")}
                 icon={<WhatsAppIcon />}
               />
+              {mostrarMeuNumero && (
+                <ListItemLink
+                  to="/meu-numero"
+                  primary="Meu numero"
+                  icon={
+                    <Badge badgeContent={meuNumeroCaido ? "!" : 0} color="error">
+                      <PhonelinkRingIcon />
+                    </Badge>
+                  }
+                />
+              )}
               <ListItemLink
                 to="/todolist"
                 primary={i18n.t("mainDrawer.listItems.tasks")}

@@ -36,6 +36,7 @@ import i18nRoutes from "./i18nRoutes";
 import wavoipRoutes from "./wavoipRoutes";
 import dockerRoutes from "./dockerRoutes";
 import crmRoutes from "./crmRoutes";
+import minhaConexaoRoutes from "./minhaConexaoRoutes";
 
 const routes = Router();
 
@@ -76,5 +77,6 @@ routes.use(i18nRoutes);
 routes.use(wavoipRoutes);
 routes.use(dockerRoutes);
 routes.use(crmRoutes);
+routes.use(minhaConexaoRoutes);
 
 export default routes;

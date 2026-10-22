@@ -62,4 +62,11 @@ describe("isAllowedForReadonly", () => {
     expect(isAllowedForReadonly("PUT", "/users/5", 5)).toBe(true);
     expect(isAllowedForReadonly("PUT", "/users/5/", "5")).toBe(true);
   });
+
+  it("gestor pode conectar/desconectar numero pela tela Meu numero, e so isso", () => {
+    expect(isAllowedForReadonly("PUT", "/minhas-conexoes/9/sessao", 5)).toBe(true);
+    expect(isAllowedForReadonly("DELETE", "/backend/minhas-conexoes/9/sessao", 5)).toBe(true);
+    expect(isAllowedForReadonly("PUT", "/whatsapp/9", 5)).toBe(false);
+    expect(isAllowedForReadonly("DELETE", "/whatsappsession/9", 5)).toBe(false);
+  });
 });

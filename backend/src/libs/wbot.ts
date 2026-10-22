@@ -43,6 +43,7 @@ import WhatsappLidMap from "../models/WhatsappLidMap";
 import { reach } from "yup";
 import crypto from "crypto";
 import { GetCompanySetting } from "../helpers/CheckSettings";
+import { registrarNumeroPareado } from "../services/WbotServices/RegistrarNumeroPareado";
 
 // const loggerBaileys = MAIN_LOGGER.child({});
 // loggerBaileys.level = process.env.BAILEYS_LOG_LEVEL || "error";
@@ -498,6 +499,10 @@ export const initWASocket = async (
                 qrcode: "",
                 retries: 0
               });
+
+              // Diamond: grava o numero pareado e avisa o CRM se mudou (tela
+              // "Meu numero"); nunca lanca e nao segura a conexao
+              registrarNumeroPareado(whatsapp, wsocket.user?.id);
 
               logger.debug(
                 {

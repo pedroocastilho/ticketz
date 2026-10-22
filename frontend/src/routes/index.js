@@ -22,6 +22,7 @@ import ContactListItems from "../pages/ContactListItems/";
 import QuickMessages from "../pages/QuickMessages/";
 import AutoReplyRules from "../pages/AutoReplyRules/";
 import AbrirConversa from "../pages/AbrirConversa";
+import MeuNumero from "../pages/MeuNumero";
 import { AuthProvider } from "../context/Auth/AuthContext";
 import { TicketsContextProvider } from "../context/Tickets/TicketsContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
@@ -67,6 +68,13 @@ const Routes = () => {
                   exact
                   path="/abrir/:numero"
                   component={AbrirConversa}
+                  isPrivate
+                />
+                {/* vendedor conecta o proprio numero (CONEXAO_PROPRIA_COMPANIES) */}
+                <Route
+                  exact
+                  path="/meu-numero"
+                  component={MeuNumero}
                   isPrivate
                 />
                 <Route

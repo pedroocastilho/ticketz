@@ -7,6 +7,8 @@
 // podendo intervir, por isso a regra vale so para as empresas listadas em
 // SUPERVISOR_READONLY_COMPANIES (ids separados por virgula; vazio = desligado).
 
+import { isRotaSessaoConexaoPropria } from "./ConexaoPropria";
+
 interface ReadonlyEnv {
   SUPERVISOR_READONLY_COMPANIES?: string;
   [key: string]: string | undefined;
@@ -33,7 +35,8 @@ export const isReadonlySupervisor = (
   readonlyCompanies(env).includes(Number(user.companyId));
 
 // O que o supervisor somente leitura ainda pode fazer alem de consultar (GET):
-// sair/renovar a sessao e alterar o proprio cadastro (nome, senha).
+// sair/renovar a sessao, alterar o proprio cadastro (nome, senha) e religar
+// numeros pela tela "Meu numero" (a permissao fina fica no controller).
 export const isAllowedForReadonly = (
   method: string,
   originalUrl: string,
@@ -49,5 +52,6 @@ export const isAllowedForReadonly = (
   if (m === "PUT" && userId !== undefined && path === `/users/${userId}`) {
     return true;
   }
+  if (isRotaSessaoConexaoPropria(m, path)) return true;
   return false;
 };

@@ -112,6 +112,10 @@ class Whatsapp extends Model<Whatsapp> {
   @Column
   token: string;
 
+  // numero pareado (so digitos), gravado a cada conexao: RegistrarNumeroPareado
+  @Column
+  pairedNumber: string;
+
   @Column(DataType.TEXT)
   facebookUserId: string;
 
