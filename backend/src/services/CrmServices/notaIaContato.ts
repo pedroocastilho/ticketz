@@ -25,8 +25,11 @@ export type EntradaNotaIa = {
   analisadoEm?: unknown;
 };
 
+// ContactCustomFields.value e varchar(255): corta antes, senao o insert falha
 const texto = (v: unknown, max: number): string =>
-  typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";
+  typeof v === "string"
+    ? v.replace(/\s+/g, " ").trim().slice(0, Math.min(max, 255))
+    : "";
 
 // Valida o corpo e devolve os campos prontos (nome e valor). null = invalido
 export const camposNotaIa = (
