@@ -7,6 +7,7 @@ import { i18n } from "../../translate/i18n";
 import { formatWhatsappContactName } from "../../helpers/formatWhatsappDisplay";
 import { getInitials } from "../../helpers/getInitials";
 import { generateColor } from "../../helpers/colorGenerator";
+import NotaIaBadge from "../NotaIaBadge";
 
 const TicketInfo = ({ contact, ticket, onClick }) => {
   const { user } = ticket;
@@ -60,7 +61,12 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
             {getInitials(contactName)}
           </Avatar>
         }
-        title={`${truncatedContactName} #${ticket.id}`}
+        title={
+          <>
+            {`${truncatedContactName} #${ticket.id}`}
+            <NotaIaBadge contact={contact} />
+          </>
+        }
         subheader={ticket.user && `${userName}`}
       />
     </>

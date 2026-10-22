@@ -33,6 +33,7 @@ import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import AndroidIcon from "@material-ui/icons/Android";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import TicketMessagesDialog from "../TicketMessagesDialog";
+import NotaIaBadge from "../NotaIaBadge";
 import DoneIcon from "@material-ui/icons/Done";
 import ClearOutlinedIcon from "@material-ui/icons/ClearOutlined";
 import { generateColor } from "../../helpers/colorGenerator";
@@ -545,6 +546,7 @@ const TicketListItemCustom = ({ ticket, setTabOpen, groupActionButtons }) => {
                   </Tooltip>
                 )}{" "}
                 {formatWhatsappContactName(ticket.contact, ticket)}
+                <NotaIaBadge contact={ticket.contact} />
               </Typography>
             </span>
           }

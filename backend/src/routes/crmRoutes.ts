@@ -4,6 +4,7 @@ import isAuth from "../middleware/isAuth";
 import * as CrmMetricasController from "../controllers/CrmMetricasController";
 import * as CrmConversaController from "../controllers/CrmConversaController";
 import * as CrmConversasController from "../controllers/CrmConversasController";
+import * as CrmIaController from "../controllers/CrmIaController";
 
 // Rotas usadas pelo CRM. Metricas (lidas pelo n8n) e conversas (lidas pelo
 // cerebro dos Diamond Agentes) sem isAuth: a protecao e o token do CRM,
@@ -21,6 +22,8 @@ routes.get(
   CrmConversasController.conversasComAtividade
 );
 routes.get("/crm/conversa-historico", CrmConversasController.conversaHistorico);
+// nota da Inteligencia Comercial gravada no contato (mesma protecao por token)
+routes.post("/crm/ia-contato", CrmIaController.gravarIaContato);
 
 routes.get("/crm/conversa", isAuth, CrmConversaController.buscar);
 routes.post("/crm/conversa", isAuth, CrmConversaController.abrirOuCriar);
