@@ -1,7 +1,6 @@
-import { timingSafeEqual } from "crypto";
 import { Request, Response } from "express";
 import { DateTime } from "luxon";
-import { isCrmWebhookEnabledFor } from "../services/WebhookServices/NotifyCrmWebhook";
+import { acessoCrmLiberado } from "../helpers/CrmWebhookToken";
 import MetricasAtendimentoService, {
   horarioDoAmbiente
 } from "../services/CrmServices/MetricasAtendimentoService";
@@ -14,12 +13,6 @@ import MetricasAtendimentoService, {
 // periodo maximo por chamada (o painel pede no maximo o mes)
 const MAX_DIAS = 62;
 
-const tokenConfere = (recebido: string, esperado: string): boolean => {
-  const a = new TextEncoder().encode(String(recebido || ""));
-  const b = new TextEncoder().encode(String(esperado || ""));
-  return a.length > 0 && a.length === b.length && timingSafeEqual(a, b);
-};
-
 const dataValida = (valor: unknown): valor is string =>
   typeof valor === "string" &&
   /^\d{4}-\d{2}-\d{2}$/.test(valor) &&
@@ -31,13 +24,7 @@ export const metricasAtendimento = async (
 ): Promise<Response> => {
   const companyId = Number(req.query.companyId);
 
-  if (
-    !tokenConfere(
-      req.header("x-webhook-token"),
-      process.env.CRM_WEBHOOK_TOKEN
-    ) ||
-    !isCrmWebhookEnabledFor(companyId)
-  ) {
+  if (!acessoCrmLiberado(req.header("x-webhook-token"), companyId)) {
     return res.status(403).json({ error: "ERR_FORBIDDEN" });
   }
 
