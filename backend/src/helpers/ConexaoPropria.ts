@@ -59,6 +59,16 @@ export const podeGerenciarConexao = (
   return (conexao.queueIds || []).some(id => minhas.has(Number(id)));
 };
 
+// Vendedor da empresa com conexao propria so conversa pelo proprio numero.
+// Antes, com o numero dele desconectado, a conversa saia pela conexao padrao
+// (ou qualquer uma conectada) = numero de um colega; em 23/10/2026 as conversas
+// do Fellipe derrubaram os numeros da Isabela, da Jackeline e do Marcos.
+export const soConexaoPropria = (
+  user: UsuarioLike,
+  env: ConexaoPropriaEnv = process.env
+): boolean =>
+  !!user && user.profile === "user" && isConexaoPropriaEnabled(user.companyId, env);
+
 // Acoes de sessao da tela "Meu numero" (POST reconecta, PUT novo QR, DELETE
 // desconecta). O supervisor somente leitura passa so por elas: continua sem
 // responder conversa, mas consegue religar o numero de um vendedor.

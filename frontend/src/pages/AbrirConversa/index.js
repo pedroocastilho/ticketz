@@ -18,6 +18,8 @@ const MENSAGENS = {
   ERR_NO_WAPP_FOUND: "Nao achei o seu numero de WhatsApp: fale com o gestor.",
   ERR_NO_DEF_WAPP_FOUND: "Nao achei o seu numero de WhatsApp: fale com o gestor."
 };
+// erros de "sem numero conectado": quem tem a tela Meu numero conecta sozinho, sem chamar o gestor
+const SEM_NUMERO = ["ERR_WAPP_NOT_CONNECTED", "ERR_NO_WAPP_FOUND", "ERR_NO_DEF_WAPP_FOUND"];
 
 const AbrirConversa = () => {
   const { numero } = useParams();
@@ -64,7 +66,8 @@ const AbrirConversa = () => {
           >
             Ir para as conversas
           </Button>
-          {codigoErro === "ERR_WAPP_NOT_CONNECTED" && user?.conexaoPropria && (
+          {/* sem numero do vendedor no ar (inclusive quando nenhum numero da empresa esta conectado): leva para "Meu numero" */}
+          {SEM_NUMERO.includes(codigoErro) && user?.conexaoPropria && (
             <Button
               style={{ marginTop: 16, marginLeft: 8 }}
               variant="contained"

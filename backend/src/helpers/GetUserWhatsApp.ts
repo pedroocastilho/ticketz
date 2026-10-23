@@ -4,6 +4,7 @@ import Ticket from "../models/Ticket";
 import User from "../models/User";
 import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
+import { soConexaoPropria } from "./ConexaoPropria";
 
 interface Request {
   companyId: number;
@@ -27,6 +28,11 @@ interface Request {
  *
  * Quando mais de uma conexao serve, prefere a marcada como padrao e depois a
  * primeira em ordem de nome.
+ *
+ * Vendedor de empresa com conexao propria (CONEXAO_PROPRIA_COMPANIES): todos os
+ * passos ficam restritos as conexoes ligadas as filas dele e o passo 5 nao
+ * existe; sem numero dele conectado = ERR_WAPP_NOT_CONNECTED (a tela manda para
+ * "Meu numero"), nunca o numero de um colega.
  */
 const GetUserWhatsApp = async ({
   companyId,
@@ -35,11 +41,27 @@ const GetUserWhatsApp = async ({
   whatsappId,
   contactId
 }: Request): Promise<Whatsapp> => {
+  const user = userId
+    ? await User.findByPk(userId, {
+        include: [{ model: Queue, as: "queues", attributes: ["id"] }]
+      })
+    : null;
+  const userQueueIds = (user?.queues || []).map(q => q.id);
+  const restrito = !!user && soConexaoPropria(user);
+  const doVendedor = (w: Whatsapp): boolean =>
+    (w.queues || []).some(q => userQueueIds.includes(q.id));
+
   if (whatsappId) {
-    const whatsapp = await Whatsapp.findByPk(whatsappId);
+    const whatsapp = await Whatsapp.findByPk(whatsappId, {
+      include: [{ model: Queue, as: "queues", attributes: ["id"] }]
+    });
 
     if (!whatsapp || whatsapp.companyId !== companyId) {
       throw new AppError("ERR_NO_WAPP_FOUND", 404);
+    }
+
+    if (restrito && !doVendedor(whatsapp)) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
     }
 
     if (whatsapp.status !== "CONNECTED") {
@@ -49,11 +71,12 @@ const GetUserWhatsApp = async ({
     return whatsapp;
   }
 
-  const connected = await Whatsapp.findAll({
+  const conectadas = await Whatsapp.findAll({
     where: { companyId, channel: "whatsapp", status: "CONNECTED" },
     include: [{ model: Queue, as: "queues", attributes: ["id"] }],
     order: [["name", "ASC"]]
   });
+  const connected = restrito ? conectadas.filter(doVendedor) : conectadas;
 
   const pick = (candidates: Whatsapp[]): Whatsapp | undefined => {
     if (candidates.length === 0) return undefined;
@@ -90,15 +113,17 @@ const GetUserWhatsApp = async ({
     if (byQueue) return byQueue;
   }
 
-  if (userId) {
-    const user = await User.findByPk(userId, {
-      include: [{ model: Queue, as: "queues", attributes: ["id"] }]
-    });
-    const userQueueIds = (user?.queues || []).map(q => q.id);
-    if (userQueueIds.length > 0) {
-      const byUser = pick(linkedTo(userQueueIds));
-      if (byUser) return byUser;
-    }
+  if (userQueueIds.length > 0) {
+    const byUser = pick(linkedTo(userQueueIds));
+    if (byUser) return byUser;
+  }
+
+  if (restrito) {
+    logger.warn(
+      { companyId, userId, queueId },
+      "GetUserWhatsApp: numero do vendedor desconectado; nao sai pelo numero de outro"
+    );
+    throw new AppError("ERR_WAPP_NOT_CONNECTED", 400);
   }
 
   // comportamento antigo: conexao padrao da empresa, ou qualquer uma conectada
