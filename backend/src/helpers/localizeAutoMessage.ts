@@ -158,9 +158,7 @@ const PT_WORDS = new Set([
 ]);
 
 // palavras iguais nos dois idiomas nao podem pontuar para nenhum lado
-const AMBIGUOUS = new Set(
-  [...ES_WORDS].filter(w => PT_WORDS.has(w))
-);
+const AMBIGUOUS = new Set([...ES_WORDS].filter(w => PT_WORDS.has(w)));
 
 export function detectLanguage(text: string): AutoMessageLang {
   if (!text) {
@@ -217,6 +215,28 @@ export function pickLanguageVariant(
   return chosen || text;
 }
 
+/**
+ * Devolve o bloco [es] de um texto, mas so quando ele existe de verdade.
+ *
+ * Serve para a fila que tem menu de chatbot: o menu e montado a partir dos
+ * titulos das opcoes e nao passa pelo pickLanguageVariant, entao um cliente
+ * que escreve em espanhol receberia a lista inteira em portugues. Quando a
+ * saudacao da fila traz um bloco [es], esse texto e a resposta completa para
+ * ele e o menu nao e enviado.
+ *
+ * Sem marcador no texto, devolve null e nada muda - e o que mantem as outras
+ * filas exatamente como estavam.
+ */
+export function getSpanishOnlyVariant(text: string): string | null {
+  if (!text?.trim()) {
+    return null;
+  }
+  const es = pickLanguageVariant(text, "es")?.trim();
+  const pt = pickLanguageVariant(text, "pt")?.trim();
+
+  return es && es !== pt ? es : null;
+}
+
 // Detecta o idioma do cliente pelas ultimas mensagens recebidas no ticket.
 export async function detectTicketLanguage(
   ticketId: number
@@ -251,13 +271,13 @@ export function getTodayOutOfHoursMessage(
   const weekday = now.toFormat("ccc").toLowerCase().slice(0, 3);
 
   // mesma regra de casamento de data do checkOpenHours
-  const override = (
-    (schedules.overrides || []) as OverrideWithMessage[]
-  ).find(o => {
-    if (!o.message?.trim()) return false;
-    if (o.repeat === "yearly") return o.date?.slice(5) === todayMonthDay;
-    return o.date === todayStr;
-  });
+  const override = ((schedules.overrides || []) as OverrideWithMessage[]).find(
+    o => {
+      if (!o.message?.trim()) return false;
+      if (o.repeat === "yearly") return o.date?.slice(5) === todayMonthDay;
+      return o.date === todayStr;
+    }
+  );
   if (override) {
     return override.message.trim();
   }

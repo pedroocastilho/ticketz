@@ -2,6 +2,7 @@ import { DateTime } from "luxon";
 import {
   detectLanguage,
   pickLanguageVariant,
+  getSpanishOnlyVariant,
   getTodayOutOfHoursMessage
 } from "../../helpers/localizeAutoMessage";
 import { OpenHoursData } from "../../helpers/checkOpenHours";
@@ -82,9 +83,7 @@ describe("getTodayOutOfHoursMessage", () => {
     const schedules = {
       timezone: "America/Sao_Paulo",
       overrides: [],
-      weeklyRules: [
-        { days: allDays, hours: [{ from: "08:00", to: "18:00" }] }
-      ]
+      weeklyRules: [{ days: allDays, hours: [{ from: "08:00", to: "18:00" }] }]
     } as OpenHoursData;
     expect(getTodayOutOfHoursMessage(schedules)).toBeNull();
   });
@@ -142,6 +141,37 @@ describe("getTodayOutOfHoursMessage", () => {
     expect(getTodayOutOfHoursMessage(undefined)).toBeNull();
     expect(
       getTodayOutOfHoursMessage([] as unknown as OpenHoursData)
+    ).toBeNull();
+  });
+});
+
+describe("getSpanishOnlyVariant", () => {
+  // saudacao da fila do 6610: portugues em cima, bloco [es] embaixo
+  const comBloco = `Olá! Escolha uma opção abaixo:
+[es]
+Hola! Por aquí atendemos solo en portugués.
+Escríbenos a suporteoficial@grupodiamond.com`;
+
+  it("devolve so o bloco [es] quando ele existe", () => {
+    expect(getSpanishOnlyVariant(comBloco)).toBe(
+      `Hola! Por aquí atendemos solo en portugués.
+Escríbenos a suporteoficial@grupodiamond.com`
+    );
+  });
+
+  it("devolve null sem marcador: a fila segue mandando o menu normal", () => {
+    expect(getSpanishOnlyVariant("Olá! Escolha uma opção abaixo:")).toBeNull();
+    expect(getSpanishOnlyVariant("")).toBeNull();
+    expect(getSpanishOnlyVariant(null as unknown as string)).toBeNull();
+    expect(getSpanishOnlyVariant(undefined as unknown as string)).toBeNull();
+  });
+
+  it("bloco [es] igual ao portugues nao conta como traducao", () => {
+    expect(
+      getSpanishOnlyVariant(`[pt]
+Igual
+[es]
+Igual`)
     ).toBeNull();
   });
 });

@@ -84,6 +84,7 @@ import normalizePhone from "../../helpers/NormalizePhone";
 import {
   detectTicketLanguage,
   pickLanguageVariant,
+  getSpanishOnlyVariant,
   getTodayOutOfHoursMessage
 } from "../../helpers/localizeAutoMessage";
 
@@ -1140,10 +1141,17 @@ const sendMenu = async (
   currentOption: Queue | QueueOption,
   sendBackToMain = true
 ) => {
-  const message =
+  const rawMessage =
     currentOption instanceof Queue
       ? (currentOption as Queue).greetingMessage
       : (currentOption as QueueOption).message;
+
+  // o cabecalho do menu tambem respeita os blocos [pt]/[es]: sem isso o
+  // brasileiro veria o bloco em espanhol colado no meio da lista de opcoes
+  const message = pickLanguageVariant(
+    rawMessage,
+    await detectTicketLanguage(ticket.id)
+  );
 
   const botText = async () => {
     const showNumericIcons =
@@ -1315,6 +1323,25 @@ export const startQueue = async (
       await verifyMediaMessage(sentMediaMessage, ticket, contact);
     }
   } else {
+    // Cliente escrevendo em espanhol numa fila cujo menu so existe em
+    // portugues: mandar a lista numerada em portugues nao ajuda ninguem. Se a
+    // saudacao da fila tem um bloco [es], ele e a resposta inteira - manda,
+    // encerra e nao abre o menu.
+    const textoEspanhol = getSpanishOnlyVariant(queue.greetingMessage);
+    if (textoEspanhol && (await detectTicketLanguage(ticket.id)) === "es") {
+      const sentMessage = await wbot.sendMessage(getJidOf(ticket), {
+        text: formatBody(textoEspanhol, ticket)
+      });
+      await verifyMessage(sentMessage, ticket, contact);
+      await updateTicket(ticket, {
+        chatbot: false,
+        queueOptionId: null,
+        status: "closed",
+        justClose: true
+      });
+      return;
+    }
+
     if (filePath) {
       const sentMediaMessage = await wbot.sendMessage(getJidOf(ticket), {
         ...optionsMsg
