@@ -9,6 +9,8 @@ import React, {
 import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
 import Paper from "@material-ui/core/Paper";
+import Button from "@material-ui/core/Button";
+import Checkbox from "@material-ui/core/Checkbox";
 
 import TicketListItem from "../TicketListItemCustom";
 import TicketsListSkeleton from "../TicketsListSkeleton";
@@ -18,6 +20,8 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import toastError from "../../errors/toastError";
+import api from "../../services/api";
+import ConfirmationModal from "../ConfirmationModal";
 
 const useStyles = makeStyles(theme => ({
   ticketsListWrapper: {
@@ -67,6 +71,33 @@ const useStyles = makeStyles(theme => ({
     fontSize: "16px",
     fontWeight: "600",
     margin: "0px"
+  },
+
+  // selecionar e resolver varias conversas de uma vez (aba Atendendo)
+  selecaoBarra: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 4,
+    padding: "4px 8px",
+    borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+    fontSize: 13,
+    color: "rgb(104, 121, 146)"
+  },
+  selecaoItem: {
+    display: "flex",
+    alignItems: "center",
+    cursor: "pointer"
+  },
+  selecaoConteudo: {
+    flex: 1,
+    minWidth: 0,
+    pointerEvents: "none"
+  },
+  carregarMais: {
+    display: "flex",
+    justifyContent: "center",
+    padding: 8
   },
 
   noTicketsDiv: {
@@ -455,6 +486,66 @@ const TicketsListCustom = props => {
     });
   };
 
+  // Selecionar e resolver de uma vez (2026-10-29, pedido da Isabela: 253 conversas em
+  // Atendendo, muitas ja terminadas). Resolve como o botao do item: sem mensagem de
+  // despedida nem pesquisa para o cliente (justClose). So na aba Atendendo.
+  const podeSelecionar = status === "open";
+  const [selecionando, setSelecionando] = useState(false);
+  const [selecionados, setSelecionados] = useState([]);
+  const [confirmarResolver, setConfirmarResolver] = useState(false);
+  const [resolvendo, setResolvendo] = useState(null);
+
+  const alternarSelecao = id =>
+    setSelecionados(atual =>
+      atual.includes(id) ? atual.filter(x => x !== id) : [...atual, id]
+    );
+
+  const sairDaSelecao = () => {
+    setSelecionando(false);
+    setSelecionados([]);
+  };
+
+  const resolverSelecionados = async () => {
+    const ids = [...selecionados];
+    setResolvendo({ feitos: 0, total: ids.length });
+    let falhas = 0;
+    // uma por vez: o servidor processa cada conversa (mesmo caminho do botao de resolver)
+    // eslint-disable-next-line no-restricted-syntax
+    for (const [i, id] of ids.entries()) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await api.put(`/tickets/${id}`, {
+          status: "closed",
+          justClose: true,
+          userId: user?.id
+        });
+        dispatch({ type: "DELETE_TICKET", payload: id });
+      } catch (err) {
+        falhas += 1;
+        if (falhas === 1) toastError(err);
+      }
+      setResolvendo({ feitos: i + 1, total: ids.length });
+    }
+    setResolvendo(null);
+    sairDaSelecao();
+  };
+
+  // "Carregar mais": se a ultima pagina falhou (servidor lento), o cursor ja aponta
+  // para a ultima conversa e a rolagem nao pedia de novo; aqui tenta outra vez
+  const carregarMais = () => {
+    const lastTicket = ticketsList[ticketsList.length - 1];
+    if (
+      lastTicket &&
+      paginationCursor.nextUpdatedAt === lastTicket.updatedAt &&
+      paginationCursor.nextTicketId === lastTicket.id
+    ) {
+      refetchTickets();
+    } else {
+      loadMore();
+    }
+  };
+  const talvezTenhaMais = !loading && ticketsList.length >= 40;
+
   const handleScroll = e => {
     if (loading) return;
 
@@ -467,6 +558,50 @@ const TicketsListCustom = props => {
 
   return (
     <Paper className={classes.ticketsListWrapper} style={style}>
+      <ConfirmationModal
+        title={`Resolver ${selecionados.length} conversa(s)?`}
+        open={confirmarResolver}
+        onClose={() => setConfirmarResolver(false)}
+        onConfirm={resolverSelecionados}
+      >
+        As conversas selecionadas vao para Resolvidos sem mandar mensagem ao
+        cliente. Se o cliente escrever de novo, a conversa volta.
+      </ConfirmationModal>
+      {podeSelecionar && ticketsList.length > 0 && (
+        <div className={classes.selecaoBarra}>
+          {resolvendo ? (
+            <span>
+              Resolvendo {resolvendo.feitos} de {resolvendo.total}...
+            </span>
+          ) : selecionando ? (
+            <>
+              <span>{selecionados.length} selecionada(s)</span>
+              <Button
+                size="small"
+                onClick={() => setSelecionados(ticketsList.map(t => t.id))}
+              >
+                Marcar todas ({ticketsList.length})
+              </Button>
+              <Button
+                size="small"
+                color="primary"
+                variant="contained"
+                disabled={!selecionados.length}
+                onClick={() => setConfirmarResolver(true)}
+              >
+                Resolver selecionadas
+              </Button>
+              <Button size="small" onClick={sairDaSelecao}>
+                Cancelar
+              </Button>
+            </>
+          ) : (
+            <Button size="small" onClick={() => setSelecionando(true)}>
+              Selecionar para resolver
+            </Button>
+          )}
+        </div>
+      )}
       <Paper
         square
         name="closed"
@@ -486,17 +621,45 @@ const TicketsListCustom = props => {
             </div>
           ) : (
             <>
-              {ticketsList.map(ticket => (
-                <TicketListItem
-                  ticket={ticket}
-                  setTabOpen={setTabOpen}
-                  key={ticket.id}
-                  groupActionButtons={!groups && !showTabGroups}
-                />
-              ))}
+              {ticketsList.map(ticket =>
+                selecionando ? (
+                  <div
+                    key={ticket.id}
+                    className={classes.selecaoItem}
+                    onClick={() => alternarSelecao(ticket.id)}
+                  >
+                    <Checkbox
+                      size="small"
+                      color="primary"
+                      checked={selecionados.includes(ticket.id)}
+                    />
+                    <div className={classes.selecaoConteudo}>
+                      <TicketListItem
+                        ticket={ticket}
+                        setTabOpen={setTabOpen}
+                        groupActionButtons={false}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <TicketListItem
+                    ticket={ticket}
+                    setTabOpen={setTabOpen}
+                    key={ticket.id}
+                    groupActionButtons={!groups && !showTabGroups}
+                  />
+                )
+              )}
             </>
           )}
           {loading && <TicketsListSkeleton />}
+          {talvezTenhaMais && (
+            <div className={classes.carregarMais}>
+              <Button size="small" onClick={carregarMais}>
+                Carregar mais
+              </Button>
+            </div>
+          )}
         </List>
       </Paper>
     </Paper>
