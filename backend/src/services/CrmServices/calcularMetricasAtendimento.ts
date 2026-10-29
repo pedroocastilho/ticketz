@@ -15,7 +15,10 @@ import { businessSecondsBetween } from "../../helpers/businessSeconds";
 //     depois da do cliente, rapido demais para ser gente;
 //   - cada espera, conversa e mensagem conta no dia em que comecou (fuso do
 //     horario de atendimento). Resposta no dia seguinte ainda conta como
-//     respondida no dia em que o cliente escreveu.
+//     respondida no dia em que o cliente escreveu;
+//   - "atendimento" (2026-10-29, painel do comercial): em cada conversa e dia
+//     em que o cliente escreveu e o vendedor respondeu (humano), o tempo da
+//     primeira a ultima dessas mensagens do dia, so dentro do horario.
 
 export type MensagemMetrica = {
   ticketId: number;
@@ -56,6 +59,10 @@ export type MetricaDia = {
   respostaQtd: number;
   respostaSomaSeg: number;
   respostaMediaSeg: number | null;
+  // conversa x dia com cliente e vendedor: da primeira a ultima mensagem
+  atendimentoQtd: number;
+  atendimentoSomaSeg: number;
+  atendimentoMediaSeg: number | null;
 };
 
 export type MetricaAgora = {
@@ -104,7 +111,10 @@ const novaMetrica = (data: string, conexaoId: number): MetricaDia => ({
   primeiraRespostaMediaSeg: null,
   respostaQtd: 0,
   respostaSomaSeg: 0,
-  respostaMediaSeg: null
+  respostaMediaSeg: null,
+  atendimentoQtd: 0,
+  atendimentoSomaSeg: 0,
+  atendimentoMediaSeg: null
 });
 
 const media = (soma: number, qtd: number): number | null =>
@@ -149,6 +159,26 @@ export function calcularMetricasAtendimento(
     // dia -> horario da primeira mensagem do cliente naquele dia
     const primeiraDoClienteNoDia = new Map<string, Date>();
     const respostasHumanas: Date[] = [];
+    // dia -> primeira e ultima mensagem (cliente ou vendedor humano) e quem falou
+    const conversaNoDia = new Map<
+      string,
+      { inicio: Date; fim: Date; cliente: boolean; vendedor: boolean }
+    >();
+    const marcarNoDia = (dia: string, em: Date, doCliente: boolean) => {
+      const atual = conversaNoDia.get(dia);
+      if (!atual) {
+        conversaNoDia.set(dia, {
+          inicio: em,
+          fim: em,
+          cliente: doCliente,
+          vendedor: !doCliente
+        });
+        return;
+      }
+      atual.fim = em;
+      if (doCliente) atual.cliente = true;
+      else atual.vendedor = true;
+    };
 
     lista.forEach((m, indice) => {
       const dia = diaDe(m.createdAt);
@@ -164,6 +194,7 @@ export function calcularMetricasAtendimento(
         }
         if (!esperaDesde) esperaDesde = m.createdAt;
         ultimaDoCliente = m.createdAt;
+        marcarNoDia(dia, m.createdAt, true);
         return;
       }
 
@@ -182,6 +213,7 @@ export function calcularMetricasAtendimento(
         }
       }
       respostasHumanas.push(m.createdAt);
+      marcarNoDia(dia, m.createdAt, false);
 
       if (esperaDesde) {
         const diaEspera = diaDe(esperaDesde);
@@ -209,6 +241,18 @@ export function calcularMetricasAtendimento(
       } else {
         alvo.conversasSemResposta += 1;
       }
+    });
+
+    // tempo de atendimento: conversa x dia em que os dois lados falaram
+    conversaNoDia.forEach((c, dia) => {
+      if (!noPeriodo(dia) || !c.cliente || !c.vendedor) return;
+      const alvo = metrica(dia, conexaoId);
+      alvo.atendimentoQtd += 1;
+      alvo.atendimentoSomaSeg += businessSecondsBetween(
+        c.inicio,
+        c.fim,
+        horario
+      );
     });
 
     // espera ainda aberta agora
@@ -244,7 +288,8 @@ export function calcularMetricasAtendimento(
         m.primeiraRespostaSomaSeg,
         m.primeiraRespostaQtd
       ),
-      respostaMediaSeg: media(m.respostaSomaSeg, m.respostaQtd)
+      respostaMediaSeg: media(m.respostaSomaSeg, m.respostaQtd),
+      atendimentoMediaSeg: media(m.atendimentoSomaSeg, m.atendimentoQtd)
     }))
     .sort((a, b) =>
       a.data === b.data ? a.conexaoId - b.conexaoId : a.data < b.data ? -1 : 1

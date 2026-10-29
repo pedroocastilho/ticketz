@@ -15,6 +15,10 @@ import { green, red } from "@material-ui/core/colors";
 
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import ErrorIcon from "@material-ui/icons/Error";
+import VisibilityIcon from "@material-ui/icons/Visibility";
+import VisibilityOffIcon from "@material-ui/icons/VisibilityOff";
+import IconButton from "@material-ui/core/IconButton";
+import Tooltip from "@material-ui/core/Tooltip";
 
 import Rating from "@material-ui/lab/Rating";
 import { i18n } from "../../translate/i18n";
@@ -31,8 +35,37 @@ const useStyles = makeStyles(theme => ({
   },
   pointer: {
     cursor: "pointer"
+  },
+  oculto: {
+    color: theme.palette.text.disabled,
+    letterSpacing: 2
   }
 }));
+
+// numero escondido pelo olho (apresentar o painel em call sem expor o time)
+export const OCULTO = "•••";
+
+// olho de mostrar/ocultar os numeros de uma linha (ou de todas, no cabecalho)
+export function OlhoNumeros({ oculto, onClick, todos = false }) {
+  const texto = oculto
+    ? todos
+      ? "Mostrar os números de todos"
+      : "Mostrar os números"
+    : todos
+      ? "Ocultar os números de todos"
+      : "Ocultar os números";
+  return (
+    <Tooltip title={texto}>
+      <IconButton size="small" onClick={onClick} aria-label={texto}>
+        {oculto ? (
+          <VisibilityOffIcon fontSize="small" />
+        ) : (
+          <VisibilityIcon fontSize="small" />
+        )}
+      </IconButton>
+    </Tooltip>
+  );
+}
 
 export function RatingBox({ rating }) {
   const ratingTrunc = rating === null ? 0 : Math.trunc(rating);
@@ -47,7 +80,13 @@ export function RatingBox({ rating }) {
 }
 
 export default function TableAttendantsStatus(props) {
-  const { loading, attendants: loadedAttendants } = props;
+  const {
+    loading,
+    attendants: loadedAttendants,
+    ocultos = [],
+    onAlternar,
+    onAlternarTodos
+  } = props;
   const classes = useStyles();
   const socketManager = useContext(SocketContext);
   const [attendants, setAttendants] = useState(loadedAttendants || []);
@@ -77,31 +116,45 @@ export default function TableAttendantsStatus(props) {
     };
   }, [socketManager]);
 
+  const comOlho = typeof onAlternar === "function";
+  const todosOcultos =
+    attendants.length > 0 && attendants.every(a => ocultos.includes(a.id));
+
   function renderList() {
-    return attendants.map(a => (
-      <TableRow key={a.id}>
-        <TableCell>{a.name}</TableCell>
-        <TableCell align="center" className={classes.pointer}>
-          <RatingBox rating={a.averageRating} />
-        </TableCell>
-        <TableCell align="center">{a.totalTickets}</TableCell>
-        <TableCell align="center">{a.openTickets}</TableCell>
-        <TableCell align="center">{a.closedTickets}</TableCell>
-        <TableCell align="center">
-          {formatTimeInterval(a.avgWaitTime, 2)}
-        </TableCell>
-        <TableCell align="center">
-          {formatTimeInterval(a.avgServiceTime, 2)}
-        </TableCell>
-        <TableCell align="center">
-          {a.online ? (
-            <CheckCircleIcon className={classes.on} />
-          ) : (
-            <ErrorIcon className={classes.off} />
+    return attendants.map(a => {
+      const oculto = ocultos.includes(a.id);
+      const numero = valor =>
+        oculto ? <span className={classes.oculto}>{OCULTO}</span> : valor;
+      return (
+        <TableRow key={a.id}>
+          {comOlho && (
+            <TableCell padding="checkbox">
+              <OlhoNumeros oculto={oculto} onClick={() => onAlternar(a.id)} />
+            </TableCell>
           )}
-        </TableCell>
-      </TableRow>
-    ));
+          <TableCell>{a.name}</TableCell>
+          <TableCell align="center" className={classes.pointer}>
+            {numero(<RatingBox rating={a.averageRating} />)}
+          </TableCell>
+          <TableCell align="center">{numero(a.totalTickets)}</TableCell>
+          <TableCell align="center">{numero(a.openTickets)}</TableCell>
+          <TableCell align="center">{numero(a.closedTickets)}</TableCell>
+          <TableCell align="center">
+            {numero(formatTimeInterval(a.avgWaitTime, 2))}
+          </TableCell>
+          <TableCell align="center">
+            {numero(formatTimeInterval(a.avgServiceTime, 2))}
+          </TableCell>
+          <TableCell align="center">
+            {a.online ? (
+              <CheckCircleIcon className={classes.on} />
+            ) : (
+              <ErrorIcon className={classes.off} />
+            )}
+          </TableCell>
+        </TableRow>
+      );
+    });
   }
 
   return !loading ? (
@@ -109,6 +162,20 @@ export default function TableAttendantsStatus(props) {
       <Table>
         <TableHead>
           <TableRow>
+            {comOlho && (
+              <TableCell padding="checkbox">
+                <OlhoNumeros
+                  todos
+                  oculto={todosOcultos}
+                  onClick={() =>
+                    onAlternarTodos(
+                      attendants.map(a => a.id),
+                      todosOcultos
+                    )
+                  }
+                />
+              </TableCell>
+            )}
             <TableCell>{i18n.t("common.user")}</TableCell>
             <TableCell align="center">{i18n.t("common.rating")}</TableCell>
             <TableCell align="center">

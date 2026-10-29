@@ -20,7 +20,10 @@ import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
 import { toast } from "react-toastify";
 
-import TableAttendantsStatus from "../../components/Dashboard/TableAttendantsStatus";
+import TableAttendantsStatus, {
+  OCULTO
+} from "../../components/Dashboard/TableAttendantsStatus";
+import GestoresPainel from "../../components/Dashboard/GestoresPainel";
 import BlogFeedCarousel from "../../components/Dashboard/BlogFeedCarousel";
 
 import { isEmpty } from "lodash";
@@ -291,6 +294,42 @@ const Dashboard = () => {
   const [ticketsData, setTicketsData] = useState({});
   const [usersData, setUsersData] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // numeros escondidos pelo olho (ids de usuario), lembrados neste navegador:
+  // o Francisco apresenta o painel em call e mostra so quem ele quiser
+  const [ocultos, setOcultos] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("painel.ocultos")) || [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const guardarOcultos = lista => {
+    setOcultos(lista);
+    try {
+      localStorage.setItem("painel.ocultos", JSON.stringify(lista));
+    } catch (e) {
+      // sem armazenamento: vale so ate recarregar a pagina
+    }
+  };
+  const alternarOculto = id =>
+    guardarOcultos(
+      ocultos.includes(id) ? ocultos.filter(x => x !== id) : [...ocultos, id]
+    );
+  const alternarTodos = (ids, todosOcultos) =>
+    guardarOcultos(
+      todosOcultos
+        ? ocultos.filter(x => !ids.includes(x))
+        : [...new Set([...ocultos, ...ids])]
+    );
+  // alguem escondido no painel: os totais do time somem junto (dariam para
+  // deduzir os numeros de quem foi escondido)
+  const idsNoPainel = [
+    ...(usersData.userReport || []),
+    ...(usersData.gestores || [])
+  ].map(u => u.id);
+  const ocultarTotais = ocultos.some(id => idsNoPainel.includes(id));
+  const total = valor => (ocultarTotais ? OCULTO : valor);
 
   const socketManager = useContext(SocketContext);
   const companyId = localStorage.getItem("companyId");
@@ -714,15 +753,19 @@ const Dashboard = () => {
           {/* ATENDIMENTOS PENDENTES */}
           <InfoRingCard
             title={i18n.t("dashboard.ticketsWaiting")}
-            value={pendingTotal}
-            graph={<SmallPie chartData={pendingChartData} />}
+            value={total(pendingTotal)}
+            graph={
+              ocultarTotais ? null : <SmallPie chartData={pendingChartData} />
+            }
           />
 
           {/* ATENDIMENTOS ACONTECENDO */}
           <InfoRingCard
             title={i18n.t("dashboard.ticketsOpen")}
-            value={openedTotal}
-            graph={<SmallPie chartData={openedChartData} />}
+            value={total(openedTotal)}
+            graph={
+              ocultarTotais ? null : <SmallPie chartData={openedChartData} />
+            }
           />
 
           {/* FILTROS */}
@@ -731,22 +774,22 @@ const Dashboard = () => {
           {/* ATENDIMENTOS REALIZADOS */}
           <InfoCard
             title={i18n.t("dashboard.ticketsDone")}
-            value={ticketsData.ticketStatistics?.totalClosed || 0}
+            value={total(ticketsData.ticketStatistics?.totalClosed || 0)}
             icon={<CheckCircleIcon style={{ fontSize: 100 }} />}
           />
 
           {/* NOVOS CONTATOS */}
           <InfoCard
             title={i18n.t("dashboard.newContacts")}
-            value={ticketsData.ticketStatistics?.newContacts || 0}
+            value={total(ticketsData.ticketStatistics?.newContacts || 0)}
             icon={<GroupAddIcon style={{ fontSize: 100 }} />}
           />
 
           {/* T.M. DE ATENDIMENTO */}
           <InfoCard
             title={i18n.t("dashboard.avgServiceTime")}
-            value={formatTimeInterval(
-              ticketsData.ticketStatistics?.avgServiceTime
+            value={total(
+              formatTimeInterval(ticketsData.ticketStatistics?.avgServiceTime)
             )}
             icon={<TimerIcon style={{ fontSize: 100 }} />}
           />
@@ -754,8 +797,8 @@ const Dashboard = () => {
           {/* T.M. DE ESPERA */}
           <InfoCard
             title={i18n.t("dashboard.avgWaitTime")}
-            value={formatTimeInterval(
-              ticketsData.ticketStatistics?.avgWaitTime
+            value={total(
+              formatTimeInterval(ticketsData.ticketStatistics?.avgWaitTime)
             )}
             icon={<HourglassEmptyIcon style={{ fontSize: 100 }} />}
           />
@@ -763,9 +806,11 @@ const Dashboard = () => {
           {/* DASHBOARD ATENDIMENTOS NO PERÍODO */}
           <Grid item xs={12}>
             <Paper className={classes.fixedHeightPaper}>
-              <TicketCountersChart
-                ticketCounters={ticketsData.ticketCounters}
-              />
+              <div style={ocultarTotais ? { filter: "blur(8px)" } : undefined}>
+                <TicketCountersChart
+                  ticketCounters={ticketsData.ticketCounters}
+                />
+              </div>
             </Paper>
           </Grid>
 
@@ -775,9 +820,23 @@ const Dashboard = () => {
               <TableAttendantsStatus
                 attendants={usersData.userReport}
                 loading={loadingUsers}
+                ocultos={ocultos}
+                onAlternar={alternarOculto}
+                onAlternarTodos={alternarTodos}
               />
             ) : null}
           </Grid>
+
+          {/* GESTAO (painel do comercial): tempo medio conectada por dia */}
+          {usersData.gestores?.length ? (
+            <Grid item xs={12}>
+              <GestoresPainel
+                gestores={usersData.gestores}
+                ocultos={ocultos}
+                onAlternar={alternarOculto}
+              />
+            </Grid>
+          ) : null}
         </Grid>
       </Container>
     </div>

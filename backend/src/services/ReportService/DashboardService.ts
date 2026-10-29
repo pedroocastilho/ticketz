@@ -9,6 +9,14 @@ import {
   listCounterSerie,
   TicketCounterSeries
 } from "../CounterServices/ListCounterSerie";
+import {
+  GestorPainel,
+  gestoresComercial,
+  isPainelComercial,
+  metricasDoPeriodo,
+  somarTempos,
+  vendedoresDoPainel
+} from "./PainelComercial";
 
 type TicketTrackingStatistics = {
   avgWaitTime: number;
@@ -55,6 +63,8 @@ type UserReportData = {
   start: string;
   end: string;
   userReport: UserStatistics[];
+  // so no painel do comercial (PainelComercial.ts)
+  gestores?: GestorPainel[];
 };
 
 export async function calculateTicketStatistics(
@@ -118,6 +128,17 @@ export async function calculateTicketStatistics(
 
   ticketStatistics.newContacts = Number(newContacts[0]?.count) || null;
 
+  // comercial: tempos medidos pelas mensagens dos vendedores (PainelComercial.ts)
+  if (isPainelComercial(companyId)) {
+    const vendedores = await vendedoresDoPainel(companyId);
+    const tempos = somarTempos(
+      await metricasDoPeriodo(companyId, start, end),
+      vendedores.flatMap(v => v.conexoes)
+    );
+    ticketStatistics.avgWaitTime = tempos.esperaSeg;
+    ticketStatistics.avgServiceTime = tempos.atendimentoSeg;
+  }
+
   return ticketStatistics;
 }
 
@@ -153,6 +174,10 @@ export async function ticketsStatusSummary(companyId: number) {
 }
 
 export async function usersStatusSummary(companyId) {
+  // comercial: so os vendedores do painel (sem quem saiu do time e sem gestores)
+  const soVendedores = isPainelComercial(companyId)
+    ? { id: { [Op.in]: (await vendedoresDoPainel(companyId)).map(v => v.id) } }
+    : {};
   const usersSummary = await User.findAll({
     attributes: [
       "id",
@@ -171,7 +196,8 @@ export async function usersStatusSummary(companyId) {
     // contas admin (gestao) nao atendem: so atendentes e supervisores na tabela
     where: {
       companyId,
-      profile: { [Op.ne]: "admin" }
+      profile: { [Op.ne]: "admin" },
+      ...soVendedores
     },
     include: [
       {
@@ -191,6 +217,12 @@ export async function usersStatusSummary(companyId) {
 }
 
 export async function userReport(companyId: number, start: Date, end: Date) {
+  // comercial: so vendedor com fila, com os tempos medidos pelas mensagens
+  const comercial = isPainelComercial(companyId);
+  const vendedores = comercial ? await vendedoresDoPainel(companyId) : [];
+  const soVendedores = comercial
+    ? { id: { [Op.in]: vendedores.map(v => v.id) } }
+    : {};
   const result = await User.findAll({
     attributes: [
       "id",
@@ -247,7 +279,8 @@ export async function userReport(companyId: number, start: Date, end: Date) {
     // contas admin (gestao) nao atendem: so atendentes e supervisores na tabela
     where: {
       companyId,
-      profile: { [Op.ne]: "admin" }
+      profile: { [Op.ne]: "admin" },
+      ...soVendedores
     },
     include: [
       {
@@ -289,7 +322,20 @@ export async function userReport(companyId: number, start: Date, end: Date) {
     group: ["User.id"]
   });
 
-  return result as unknown[] as UserStatistics[];
+  if (!comercial) {
+    return result as unknown[] as UserStatistics[];
+  }
+  const dias = await metricasDoPeriodo(companyId, start, end);
+  return result.map(r => {
+    const linha = r.get({ plain: true }) as unknown as UserStatistics;
+    const vendedor = vendedores.find(v => v.id === Number(linha.id));
+    const tempos = somarTempos(dias, vendedor ? vendedor.conexoes : []);
+    return {
+      ...linha,
+      avgWaitTime: tempos.esperaSeg,
+      avgServiceTime: tempos.atendimentoSeg
+    };
+  });
 }
 
 export async function statusSummaryService(companyId: number) {
@@ -350,6 +396,9 @@ export async function usersReportService(
   return {
     start: params.date_from,
     end: params.date_to,
-    userReport: await userReport(companyId, start, end)
+    userReport: await userReport(companyId, start, end),
+    ...(isPainelComercial(companyId)
+      ? { gestores: await gestoresComercial(companyId, start, end) }
+      : {})
   };
 }

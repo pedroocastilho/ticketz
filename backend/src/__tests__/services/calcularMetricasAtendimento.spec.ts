@@ -168,4 +168,52 @@ describe("calcularMetricasAtendimento", () => {
     );
     expect(r.dias).toEqual([]);
   });
+
+  it("tempo de atendimento: da primeira a ultima mensagem da conversa no dia, so com os dois lados e sem o bot", () => {
+    const r = calcularMetricasAtendimento(
+      [
+        // conversa 1: cliente 10h, bot 2 s depois, vendedor 10h10, cliente 10h20, vendedor 10h40 -> 40 min
+        cliente(1, br("15", "10:00")),
+        vendedor(1, new Date(br("15", "10:00").getTime() + 2000)),
+        vendedor(1, br("15", "10:10")),
+        cliente(1, br("15", "10:20")),
+        vendedor(1, br("15", "10:40")),
+        // conversa 2: vendedor 11h, cliente 11h30 -> 30 min
+        vendedor(2, br("15", "11:00")),
+        cliente(2, br("15", "11:30")),
+        // conversa 3: so o cliente falou -> nao conta
+        cliente(3, br("15", "12:00")),
+        // conversa 4: so o vendedor falou -> nao conta
+        vendedor(4, br("15", "13:00")),
+        vendedor(4, br("15", "13:30"))
+      ],
+      [
+        ticket(1, br("15", "10:00")),
+        ticket(2, br("15", "11:00")),
+        ticket(3, br("15", "12:00")),
+        ticket(4, br("15", "13:00"))
+      ],
+      opcoes
+    );
+    const d = doDia(r);
+    expect(d.atendimentoQtd).toBe(2);
+    expect(d.atendimentoSomaSeg).toBe(70 * 60);
+    expect(d.atendimentoMediaSeg).toBe(35 * 60);
+  });
+
+  it("tempo de atendimento conta em cada dia so dentro do horario", () => {
+    const r = calcularMetricasAtendimento(
+      [
+        cliente(1, br("14", "18:30")),
+        vendedor(1, br("14", "19:30")),
+        cliente(1, br("15", "08:00")),
+        vendedor(1, br("15", "08:15"))
+      ],
+      [ticket(1, br("14", "18:30"))],
+      { ...opcoes, de: "2026-10-14", ate: "2026-10-15" }
+    );
+    // dia 14: 18h30 a 19h30, mas o expediente acaba as 19h -> 30 min
+    expect(doDia(r, 9, "2026-10-14").atendimentoSomaSeg).toBe(30 * 60);
+    expect(doDia(r, 9, "2026-10-15").atendimentoSomaSeg).toBe(15 * 60);
+  });
 });
