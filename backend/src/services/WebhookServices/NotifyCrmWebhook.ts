@@ -6,14 +6,19 @@ import { logger } from "../../utils/logger";
 //     vendedor dono do numero e guarda o link da conversa) e resposta do
 //     vendedor, pelo painel ou pelo celular (o CRM anda o card);
 //   - evento "etiqueta": as etiquetas da conversa mudaram (o CRM grava origem,
-//     produto ou tira do funil com "Nao e lead"). Vai a lista completa atual.
+//     produto ou tira do funil com "Nao e lead"; etiqueta de etapa anda os
+//     cartoes). Vai a lista completa atual;
+//   - evento "dono": vendedor puxou da fila comum uma conversa que ficou 5h sem
+//     resposta (VacuoComercial.ts); o CRM passa os cartoes para ele.
 //
 // So vale para as empresas listadas em CRM_WEBHOOK_COMPANIES (ids separados
 // por virgula). Sem URL, token ou lista o recurso fica desligado: o suporte,
 // que esta na mesma instalacao, nunca manda nada para o CRM.
 
 interface Request {
-  evento?: "mensagem" | "etiqueta";
+  // "dono": vendedor puxou a conversa da fila comum (5h sem resposta); o CRM
+  // passa os cartoes abertos da pessoa para o dono do numero novo
+  evento?: "mensagem" | "etiqueta" | "dono";
   companyId: number;
   fromMe?: boolean;
   // hora da mensagem (o CRM usa para os carimbos; padrao = agora)

@@ -23,6 +23,8 @@ import {
   detectTicketLanguage,
   pickLanguageVariant
 } from "../../helpers/localizeAutoMessage";
+import { destinoAoPuxarLivre } from "../CrmServices/FilaLivresService";
+import NotifyCrmWebhook from "../WebhookServices/NotifyCrmWebhook";
 
 export interface UpdateTicketData {
   status?: string;
@@ -111,7 +113,7 @@ const UpdateTicketService = async ({
       companyId = user.companyId;
     }
     const { justClose } = ticketData;
-    const newWhatsappId = ticketData.whatsappId;
+    let newWhatsappId = ticketData.whatsappId;
     let { status } = ticketData;
     let { queueId, userId } = ticketData;
     const fromChatbot = ticketData.chatbot || false;
@@ -128,6 +130,16 @@ const UpdateTicketService = async ({
 
     const ticket = await ShowTicketService(ticketId, companyId);
     const isGroup = ticket.contact?.isGroup || ticket.isGroup;
+
+    // comercial: vendedor puxando da fila comum (conversa 5h sem resposta) leva
+    // a conversa para o numero e a fila dele (helpers/VacuoComercial.ts)
+    const puxouDaFilaLivre = isGroup
+      ? null
+      : await destinoAoPuxarLivre({ ticket, status, userId });
+    if (puxouDaFilaLivre) {
+      newWhatsappId = puxouDaFilaLivre.whatsappId;
+      queueId = puxouDaFilaLivre.queueId;
+    }
 
     if (queueId && queueId !== ticket.queueId) {
       const newQueue = await Queue.findByPk(queueId);
@@ -498,6 +510,27 @@ const UpdateTicketService = async ({
     }
 
     websocketUpdateTicket(ticket, [`user-${oldUserId}`]);
+
+    // o CRM troca o dono dos cartoes da pessoa para quem puxou (sem await)
+    if (puxouDaFilaLivre && ticket.userId) {
+      NotifyCrmWebhook({
+        evento: "dono",
+        companyId: ticket.companyId,
+        ticket: {
+          id: ticket.id,
+          uuid: ticket.uuid,
+          status: ticket.status,
+          queueId: ticket.queueId,
+          userId: ticket.userId
+        },
+        whatsapp: { id: ticket.whatsappId, name: ticket.whatsapp?.name },
+        contact: {
+          id: ticket.contact?.id,
+          name: ticket.contact?.name,
+          number: ticket.contact?.number
+        }
+      });
+    }
 
     return { ticket, oldStatus, oldUserId };
   } catch (err) {

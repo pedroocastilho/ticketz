@@ -43,6 +43,7 @@ import NotifyHumanHandoff from "./NotifyHumanHandoff";
 import NotifyCrmWebhook, {
   isRecentMessage
 } from "../WebhookServices/NotifyCrmWebhook";
+import { marcarEmAtendimento } from "../CrmServices/EtiquetaEtapaService";
 import HandleReplyFromPhone from "../../helpers/HandleReplyFromPhone";
 import UpdateTicketService, {
   UpdateTicketData
@@ -2033,6 +2034,11 @@ const handleMessage = async (
         whatsapp: { id: whatsapp.id, name: whatsapp.name },
         contact: { id: contact.id, name: contact.name, number: contact.number }
       });
+      // comercial: primeira mensagem do vendedor (nao automatica) numa conversa
+      // sem etiqueta de etapa marca "Em atendimento" (EtiquetaEtapa.ts)
+      if (msg.key.fromMe && !String(bodyMessage || "").startsWith("\u200e")) {
+        marcarEmAtendimento(ticket.id, companyId);
+      }
     }
 
     if (isGroup || contact.disableBot || msg.key.fromMe) {

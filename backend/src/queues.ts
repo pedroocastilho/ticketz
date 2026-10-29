@@ -28,6 +28,7 @@ import { parseToMilliseconds } from "./helpers/parseToMilliseconds";
 import { startCampaignQueues } from "./queues/campaign";
 import { startAutoReplyProcess } from "./queues/autoReply";
 import { clearRepeatableJobsFromQueues } from "./queues/repeatableJobs";
+import { rodadaDoVacuo } from "./services/CrmServices/VacuoComercialService";
 import { handlePendingTicketTimeout } from "./queues/pendingTicketTimeout";
 import OutOfTicketMessage from "./models/OutOfTicketMessages";
 import { getJidOf } from "./services/WbotServices/getJidOf";
@@ -571,6 +572,8 @@ async function handleEveryMinute(job: Job) {
 
     await handleRatingsTimeout();
     await handleTicketTimeouts();
+    // comercial: conversa 5h sem resposta volta para a fila comum
+    await rodadaDoVacuo();
     logger.trace(`handleEveryMinute: exiting - executionId: ${executionId}`);
   } catch (e) {
     logger.error(
