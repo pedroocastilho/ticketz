@@ -1140,12 +1140,17 @@ const sendMenu = async (
   wbot: Session,
   ticket: Ticket,
   currentOption: Queue | QueueOption,
-  sendBackToMain = true
+  sendBackToMain = true,
+  // texto que substitui a saudacao (ou o texto da opcao) no topo da lista.
+  // Usado no aviso de opcao invalida: o aluno recebe "opcao nao encontrada"
+  // com os numeros logo embaixo, sem repetir o boas-vindas nem as instrucoes
+  headerOverride?: string
 ) => {
   const rawMessage =
-    currentOption instanceof Queue
+    headerOverride ||
+    (currentOption instanceof Queue
       ? (currentOption as Queue).greetingMessage
-      : (currentOption as QueueOption).message;
+      : (currentOption as QueueOption).message);
 
   // o cabecalho do menu tambem respeita os blocos [pt]/[es]: sem isso o
   // brasileiro veria o bloco em espanhol colado no meio da lista de opcoes
@@ -1459,6 +1464,15 @@ const handleRating = async (
     );
 };
 
+// Aviso de opcao invalida no menu do chatbot (configuracao da empresa
+// chatbotInvalidOptionMessage, aceita bloco [es]). Vazio = so reenvia o menu,
+// como sempre foi.
+const getInvalidOptionNotice = async (companyId: number): Promise<string> =>
+  (
+    (await GetCompanySetting(companyId, "chatbotInvalidOptionMessage", "")) ||
+    ""
+  ).trim();
+
 const handleChartbot = async (
   ticket: Ticket,
   msg: WAMessage,
@@ -1476,7 +1490,10 @@ const handleChartbot = async (
     order: [["options", "option", "ASC"]]
   });
 
-  const messageBody = await getBodyMessage(msg?.message);
+  // sem os espacos das pontas: "1 " digitado no celular e a opcao 1, e com o
+  // aviso de opcao invalida isso viraria uma bronca injusta
+  const messageBody = (await getBodyMessage(msg?.message))?.trim();
+  let opcaoInvalida = false;
 
   if (messageBody === "#") {
     // voltar para o menu inicial
@@ -1511,6 +1528,9 @@ const handleChartbot = async (
           parentId: ticket.queueOptionId
         }
       });
+    }
+    if (!option) {
+      opcaoInvalida = true;
     }
     if (option) {
       await ticket.update({ queueOptionId: option?.id });
@@ -1550,7 +1570,8 @@ const handleChartbot = async (
         await SendWhatsAppMessage({ body, ticket });
       }
     } else {
-      await sendMenu(wbot, ticket, queue);
+      const aviso = await getInvalidOptionNotice(ticket.companyId);
+      await sendMenu(wbot, ticket, queue, false, aviso || undefined);
     }
   }
 
@@ -1665,7 +1686,10 @@ const handleChartbot = async (
     }
 
     if (currentOption.options.length > -1) {
-      sendMenu(wbot, ticket, currentOption);
+      const aviso = opcaoInvalida
+        ? await getInvalidOptionNotice(ticket.companyId)
+        : "";
+      sendMenu(wbot, ticket, currentOption, true, aviso || undefined);
     }
   }
 };
@@ -2476,4 +2500,4 @@ const wbotMessageListener = async (
   }
 };
 
-export { wbotMessageListener, handleMessage };
+export { wbotMessageListener, handleMessage, handleChartbot };
