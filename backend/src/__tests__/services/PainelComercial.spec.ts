@@ -62,14 +62,14 @@ describe("PainelComercial", () => {
         respostaQtd: 2,
         respostaSomaSeg: 600,
         atendimentoQtd: 1,
-        atendimentoSomaSeg: 1800
+        atendimentoRealSomaSeg: 1800
       }),
       dia(9, {
         data: "2026-10-28",
         respostaQtd: 2,
         respostaSomaSeg: 200,
         atendimentoQtd: 3,
-        atendimentoSomaSeg: 600
+        atendimentoRealSomaSeg: 600
       }),
       dia(10, { respostaQtd: 10, respostaSomaSeg: 99999 })
     ];

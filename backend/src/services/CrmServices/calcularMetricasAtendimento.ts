@@ -65,6 +65,9 @@ export type MetricaDia = {
   // conversa x dia com cliente e vendedor: da primeira a ultima mensagem
   atendimentoQtd: number;
   atendimentoSomaSeg: number;
+  // o mesmo tempo contado no relogio, sem cortar pelo horario (painel do
+  // comercial, 2026-11-02: domingo trabalhado ficava 0h 0m)
+  atendimentoRealSomaSeg: number;
   atendimentoMediaSeg: number | null;
 };
 
@@ -118,6 +121,7 @@ const novaMetrica = (data: string, conexaoId: number): MetricaDia => ({
   respostaMediaSeg: null,
   atendimentoQtd: 0,
   atendimentoSomaSeg: 0,
+  atendimentoRealSomaSeg: 0,
   atendimentoMediaSeg: null
 });
 
@@ -254,6 +258,9 @@ export function calcularMetricasAtendimento(
       alvo.conversasAtendidas += 1;
       if (!c.cliente) return;
       alvo.atendimentoQtd += 1;
+      alvo.atendimentoRealSomaSeg += Math.round(
+        (c.fim.getTime() - c.inicio.getTime()) / 1000
+      );
       alvo.atendimentoSomaSeg += businessSecondsBetween(
         c.inicio,
         c.fim,

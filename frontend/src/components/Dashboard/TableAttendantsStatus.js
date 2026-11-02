@@ -230,7 +230,9 @@ export default function TableAttendantsStatus(props) {
               {i18n.t("dashboard.avgWaitTime")}
             </TableCell>
             <TableCell align="center">
-              {i18n.t("dashboard.avgServiceTime")}
+              {comercial
+                ? "Tempo médio de atendimento"
+                : i18n.t("dashboard.avgServiceTime")}
             </TableCell>
             <TableCell align="center">
               {i18n.t("dashboard.userCurrentStatus")}

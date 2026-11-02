@@ -60,7 +60,9 @@ export function somarTempos(
     .forEach(d => {
       esperaSoma += d.respostaSomaSeg;
       esperaQtd += d.respostaQtd;
-      atendSoma += d.atendimentoSomaSeg || 0;
+      // atendimento no relogio (domingo e fora do horario contam: o vendedor
+      // estava conversando); a espera segue so no expediente
+      atendSoma += d.atendimentoRealSomaSeg || 0;
       atendQtd += d.atendimentoQtd || 0;
     });
   return {

@@ -851,7 +851,11 @@ const Dashboard = () => {
 
           {/* T.M. DE ATENDIMENTO */}
           <InfoCard
-            title={i18n.t("dashboard.avgServiceTime")}
+            title={
+              comercial
+                ? "Tempo médio de atendimento"
+                : i18n.t("dashboard.avgServiceTime")
+            }
             value={total(
               formatTimeInterval(ticketsData.ticketStatistics?.avgServiceTime)
             )}

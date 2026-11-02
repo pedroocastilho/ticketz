@@ -225,6 +225,8 @@ describe("calcularMetricasAtendimento", () => {
     expect(d.mensagensEnviadas).toBe(2);
     expect(d.conversasSemResposta).toBe(1);
     expect(d.atendimentoSomaSeg).toBe(0);
+    // no relogio: 10h00 a 10h30
+    expect(d.atendimentoRealSomaSeg).toBe(30 * 60);
   });
 
   it("tempo de atendimento conta em cada dia so dentro do horario", () => {
