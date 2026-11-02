@@ -1,6 +1,7 @@
 import {
   gestoresDoPainel,
   isPainelComercial,
+  somarContagens,
   somarTempos,
   tempoConectadoPorDia
 } from "../../services/ReportService/PainelComercial";
@@ -22,6 +23,30 @@ const dia = (conexaoId: number, x: Partial<MetricaDia>): MetricaDia =>
   }) as MetricaDia;
 
 describe("PainelComercial", () => {
+  it("soma as contagens do dia inteiro so das conexoes do vendedor", () => {
+    const dias = [
+      dia(9, {
+        conversasAtendidas: 5,
+        conversasSemResposta: 1,
+        conversasIniciadasVendedor: 2,
+        mensagensEnviadas: 40
+      }),
+      dia(9, {
+        data: "2026-10-28",
+        conversasAtendidas: 3,
+        mensagensEnviadas: 10
+      }),
+      dia(10, { conversasAtendidas: 99, mensagensEnviadas: 999 })
+    ];
+    expect(somarContagens(dias, [9])).toEqual({
+      conversasAtendidas: 8,
+      conversasSemResposta: 1,
+      conversasIniciadas: 2,
+      mensagensEnviadas: 50
+    });
+    expect(somarContagens(dias, [12]).conversasAtendidas).toBe(0);
+  });
+
   it("liga so nas empresas de PAINEL_COMERCIAL_COMPANIES e le os gestores", () => {
     const env = { PAINEL_COMERCIAL_COMPANIES: "2, 5", PAINEL_GESTORES: "10" };
     expect(isPainelComercial(2, env)).toBe(true);

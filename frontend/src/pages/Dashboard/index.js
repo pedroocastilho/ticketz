@@ -273,8 +273,10 @@ const Dashboard = () => {
   const [dateFrom, setDateFrom] = useState(
     moment("1", "D").format("YYYY-MM-DDTHH") + ":00"
   );
+  // fim do dia, nao a hora em que a pagina abriu (2026-11-02: trocando so a
+  // data, o periodo terminava as 8h59 e o painel mostrava o dia quase vazio)
   const [dateTo, setDateTo] = useState(
-    moment().format("YYYY-MM-DDTHH") + ":59"
+    moment().format("YYYY-MM-DD") + "T23:59"
   );
   const { getCurrentUserInfo } = useAuth();
 
@@ -330,6 +332,9 @@ const Dashboard = () => {
   ].map(u => u.id);
   const ocultarTotais = ocultos.some(id => idsNoPainel.includes(id));
   const total = valor => (ocultarTotais ? OCULTO : valor);
+  // painel do comercial: o backend manda as contagens pelas mensagens
+  const comercial =
+    ticketsData.ticketStatistics?.conversasAtendidas !== undefined;
 
   const socketManager = useContext(SocketContext);
   const companyId = localStorage.getItem("companyId");
@@ -459,16 +464,27 @@ const Dashboard = () => {
   async function fetchData() {
     let params = { tz: getTimezoneOffset() };
 
-    const days = Number(period);
+    // Hoje / Ontem: o dia inteiro (2026-11-02, metricas diarias do comercial)
+    const diaInteiro = { hoje: 0, ontem: 1 }[period];
+    const days = diaInteiro === undefined ? Number(period) : 0;
+
+    if (diaInteiro !== undefined) {
+      const dia = moment().subtract(diaInteiro, "days").format("YYYY-MM-DD");
+      params = { ...params, date_from: dia, date_to: dia };
+    }
 
     if (days) {
+      // mantem o fuso (antes o periodo saia em UTC, 3h deslocado)
       params = {
+        ...params,
         date_from: moment().subtract(days, "days").format("YYYY-MM-DD"),
         date_to: moment().format("YYYY-MM-DD")
       };
     }
 
-    if (!days && !isEmpty(dateFrom) && moment(dateFrom).isValid()) {
+    const personalizado = !days && diaInteiro === undefined;
+
+    if (personalizado && !isEmpty(dateFrom) && moment(dateFrom).isValid()) {
       params = {
         ...params,
         date_from: moment(dateFrom).format("YYYY-MM-DD"),
@@ -476,7 +492,7 @@ const Dashboard = () => {
       };
     }
 
-    if (!days && !isEmpty(dateTo) && moment(dateTo).isValid()) {
+    if (personalizado && !isEmpty(dateTo) && moment(dateTo).isValid()) {
       params = {
         ...params,
         date_to: moment(dateTo).format("YYYY-MM-DD"),
@@ -529,6 +545,8 @@ const Dashboard = () => {
               onChange={e => handleChangePeriod(e.target.value)}
             >
               <MenuItem value={0}>{i18n.t("dashboard.filter.custom")}</MenuItem>
+              <MenuItem value="hoje">Hoje</MenuItem>
+              <MenuItem value="ontem">Ontem</MenuItem>
               <MenuItem value={3}>
                 {i18n.t("dashboard.filter.last3days")}
               </MenuItem>
@@ -771,17 +789,32 @@ const Dashboard = () => {
           {/* FILTROS */}
           {renderFilters()}
 
-          {/* ATENDIMENTOS REALIZADOS */}
+          {/* ATENDIMENTOS REALIZADOS (comercial: conversas atendidas, porque
+              ninguem finaliza conversa e "resolvidos" ficava sempre zerado) */}
           <InfoCard
-            title={i18n.t("dashboard.ticketsDone")}
-            value={total(ticketsData.ticketStatistics?.totalClosed || 0)}
+            title={
+              comercial
+                ? "Conversas atendidas"
+                : i18n.t("dashboard.ticketsDone")
+            }
+            value={total(
+              (comercial
+                ? ticketsData.ticketStatistics?.conversasAtendidas
+                : ticketsData.ticketStatistics?.totalClosed) || 0
+            )}
             icon={<CheckCircleIcon style={{ fontSize: 100 }} />}
           />
 
-          {/* NOVOS CONTATOS */}
+          {/* NOVOS CONTATOS (comercial: mensagens enviadas pelos vendedores) */}
           <InfoCard
-            title={i18n.t("dashboard.newContacts")}
-            value={total(ticketsData.ticketStatistics?.newContacts || 0)}
+            title={
+              comercial ? "Mensagens enviadas" : i18n.t("dashboard.newContacts")
+            }
+            value={total(
+              (comercial
+                ? ticketsData.ticketStatistics?.mensagensEnviadas
+                : ticketsData.ticketStatistics?.newContacts) || 0
+            )}
             icon={<GroupAddIcon style={{ fontSize: 100 }} />}
           />
 

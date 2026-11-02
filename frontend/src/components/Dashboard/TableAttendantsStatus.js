@@ -117,6 +117,11 @@ export default function TableAttendantsStatus(props) {
   }, [socketManager]);
 
   const comOlho = typeof onAlternar === "function";
+  // painel do comercial (2026-11-02): ninguem finaliza conversa, entao "total" e
+  // "resolvidos" nao mostravam o trabalho do dia; no lugar, as contagens pelas
+  // mensagens (o dia inteiro, inclusive domingo)
+  const comercial =
+    attendants.length > 0 && attendants[0].conversasAtendidas !== undefined;
   const todosOcultos =
     attendants.length > 0 && attendants.every(a => ocultos.includes(a.id));
 
@@ -136,9 +141,29 @@ export default function TableAttendantsStatus(props) {
           <TableCell align="center" className={classes.pointer}>
             {numero(<RatingBox rating={a.averageRating} />)}
           </TableCell>
-          <TableCell align="center">{numero(a.totalTickets)}</TableCell>
-          <TableCell align="center">{numero(a.openTickets)}</TableCell>
-          <TableCell align="center">{numero(a.closedTickets)}</TableCell>
+          {comercial ? (
+            <>
+              <TableCell align="center">
+                {numero(a.conversasAtendidas)}
+              </TableCell>
+              <TableCell align="center">
+                {numero(a.conversasSemResposta)}
+              </TableCell>
+              <TableCell align="center">
+                {numero(a.conversasIniciadas)}
+              </TableCell>
+              <TableCell align="center">
+                {numero(a.mensagensEnviadas)}
+              </TableCell>
+              <TableCell align="center">{numero(a.openTickets)}</TableCell>
+            </>
+          ) : (
+            <>
+              <TableCell align="center">{numero(a.totalTickets)}</TableCell>
+              <TableCell align="center">{numero(a.openTickets)}</TableCell>
+              <TableCell align="center">{numero(a.closedTickets)}</TableCell>
+            </>
+          )}
           <TableCell align="center">
             {numero(formatTimeInterval(a.avgWaitTime, 2))}
           </TableCell>
@@ -178,15 +203,29 @@ export default function TableAttendantsStatus(props) {
             )}
             <TableCell>{i18n.t("common.user")}</TableCell>
             <TableCell align="center">{i18n.t("common.rating")}</TableCell>
-            <TableCell align="center">
-              {i18n.t("dashboard.totalTickets")}
-            </TableCell>
-            <TableCell align="center">
-              {i18n.t("dashboard.ticketsOpen")}
-            </TableCell>
-            <TableCell align="center">
-              {i18n.t("dashboard.ticketsDone")}
-            </TableCell>
+            {comercial ? (
+              <>
+                <TableCell align="center">Conversas atendidas</TableCell>
+                <TableCell align="center">Sem resposta</TableCell>
+                <TableCell align="center">Iniciadas pelo vendedor</TableCell>
+                <TableCell align="center">Mensagens enviadas</TableCell>
+                <TableCell align="center">
+                  {i18n.t("dashboard.ticketsOpen")}
+                </TableCell>
+              </>
+            ) : (
+              <>
+                <TableCell align="center">
+                  {i18n.t("dashboard.totalTickets")}
+                </TableCell>
+                <TableCell align="center">
+                  {i18n.t("dashboard.ticketsOpen")}
+                </TableCell>
+                <TableCell align="center">
+                  {i18n.t("dashboard.ticketsDone")}
+                </TableCell>
+              </>
+            )}
             <TableCell align="center">
               {i18n.t("dashboard.avgWaitTime")}
             </TableCell>

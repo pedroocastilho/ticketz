@@ -199,6 +199,32 @@ describe("calcularMetricasAtendimento", () => {
     expect(d.atendimentoQtd).toBe(2);
     expect(d.atendimentoSomaSeg).toBe(70 * 60);
     expect(d.atendimentoMediaSeg).toBe(35 * 60);
+    // atendidas = conversas em que o vendedor falou (1, 2 e 4); o bot nao conta
+    expect(d.conversasAtendidas).toBe(3);
+  });
+
+  it("domingo trabalhado: conta conversas atendidas e mensagens, tempo fica fora do horario", () => {
+    // 18/10/2026 e domingo
+    const r = calcularMetricasAtendimento(
+      [
+        cliente(1, br("18", "10:00")),
+        vendedor(1, br("18", "10:05")),
+        vendedor(1, br("18", "10:30")),
+        cliente(2, br("18", "15:00"))
+      ],
+      [ticket(1, br("18", "10:00")), ticket(2, br("18", "15:00"))],
+      {
+        ...opcoes,
+        de: "2026-10-18",
+        ate: "2026-10-18",
+        agora: br("18", "20:00")
+      }
+    );
+    const d = doDia(r, 9, "2026-10-18");
+    expect(d.conversasAtendidas).toBe(1);
+    expect(d.mensagensEnviadas).toBe(2);
+    expect(d.conversasSemResposta).toBe(1);
+    expect(d.atendimentoSomaSeg).toBe(0);
   });
 
   it("tempo de atendimento conta em cada dia so dentro do horario", () => {

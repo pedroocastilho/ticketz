@@ -49,6 +49,9 @@ export type MetricaDia = {
   conversasRespondidas: number;
   conversasSemResposta: number;
   conversasIniciadasVendedor: number;
+  // conversa x dia em que o vendedor mandou mensagem (humana): o dia todo,
+  // dentro ou fora do horario (painel do comercial, 2026-11-02)
+  conversasAtendidas: number;
   mensagensRecebidas: number;
   mensagensEnviadas: number;
   // primeira resposta = espera aberta pela mensagem que comecou a conversa
@@ -104,6 +107,7 @@ const novaMetrica = (data: string, conexaoId: number): MetricaDia => ({
   conversasRespondidas: 0,
   conversasSemResposta: 0,
   conversasIniciadasVendedor: 0,
+  conversasAtendidas: 0,
   mensagensRecebidas: 0,
   mensagensEnviadas: 0,
   primeiraRespostaQtd: 0,
@@ -245,8 +249,10 @@ export function calcularMetricasAtendimento(
 
     // tempo de atendimento: conversa x dia em que os dois lados falaram
     conversaNoDia.forEach((c, dia) => {
-      if (!noPeriodo(dia) || !c.cliente || !c.vendedor) return;
+      if (!noPeriodo(dia) || !c.vendedor) return;
       const alvo = metrica(dia, conexaoId);
+      alvo.conversasAtendidas += 1;
+      if (!c.cliente) return;
       alvo.atendimentoQtd += 1;
       alvo.atendimentoSomaSeg += businessSecondsBetween(
         c.inicio,

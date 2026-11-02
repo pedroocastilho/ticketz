@@ -1,6 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { DateTime } from "luxon";
 import sequelize from "../../database";
+import { nomeFilaLivres } from "../../helpers/VacuoComercial";
 import MetricasAtendimentoService, {
   horarioDoAmbiente
 } from "../CrmServices/MetricasAtendimentoService";
@@ -78,6 +79,36 @@ export type TempoConectado = {
   mediaSeg: number | null;
 };
 
+export type Contagens = {
+  conversasAtendidas: number;
+  conversasSemResposta: number;
+  conversasIniciadas: number;
+  mensagensEnviadas: number;
+};
+
+// contagens do periodo nas conexoes pedidas (todas, se conexoes = null); contam
+// o dia inteiro, inclusive fora do horario (domingo trabalhado aparece aqui)
+export function somarContagens(
+  dias: MetricaDia[],
+  conexoes: number[] | null
+): Contagens {
+  const total: Contagens = {
+    conversasAtendidas: 0,
+    conversasSemResposta: 0,
+    conversasIniciadas: 0,
+    mensagensEnviadas: 0
+  };
+  dias
+    .filter(d => !conexoes || conexoes.includes(d.conexaoId))
+    .forEach(d => {
+      total.conversasAtendidas += d.conversasAtendidas || 0;
+      total.conversasSemResposta += d.conversasSemResposta || 0;
+      total.conversasIniciadas += d.conversasIniciadasVendedor || 0;
+      total.mensagensEnviadas += d.mensagensEnviadas || 0;
+    });
+  return total;
+}
+
 // tempo conectado: uniao das sessoes (varias abas ao mesmo tempo contam uma
 // vez) dentro de [de, ate], separada por dia no fuso; media = por dia com
 // alguma conexao
@@ -132,7 +163,9 @@ export function tempoConectadoPorDia(
 
 export type VendedorPainel = { id: number; name: string; conexoes: number[] };
 
-// vendedor = perfil user com alguma fila; conexoes = as ligadas as filas dele
+// vendedor = perfil user com alguma fila; conexoes = as ligadas as filas dele,
+// menos as da fila comum "Livres" (2026-11-02: o numero de quem saiu cai nela e
+// todos os vendedores estao nela; senao entraria nos numeros de todo mundo)
 export async function vendedoresDoPainel(
   companyId: number
 ): Promise<VendedorPainel[]> {
@@ -145,11 +178,18 @@ export async function vendedoresDoPainel(
           FROM "Users" u
           JOIN "UserQueues" uq ON uq."userId" = u.id
           LEFT JOIN "WhatsappQueues" wq ON wq."queueId" = uq."queueId"
+                AND wq."queueId" NOT IN (
+                  SELECT q.id FROM "Queues" q
+                   WHERE q."companyId" = :companyId AND q.name = :livres
+                )
          WHERE u."companyId" = :companyId AND u.profile = 'user'
          GROUP BY u.id, u.name
          ORDER BY u.name
       `,
-      { replacements: { companyId }, type: QueryTypes.SELECT }
+      {
+        replacements: { companyId, livres: nomeFilaLivres() },
+        type: QueryTypes.SELECT
+      }
     );
   return linhas.map(l => ({
     id: Number(l.id),

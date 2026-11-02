@@ -14,6 +14,7 @@ import {
   gestoresComercial,
   isPainelComercial,
   metricasDoPeriodo,
+  somarContagens,
   somarTempos,
   vendedoresDoPainel
 } from "./PainelComercial";
@@ -23,6 +24,9 @@ type TicketTrackingStatistics = {
   avgServiceTime: number;
   totalClosed: number;
   newContacts: number;
+  // so no painel do comercial: contagens pelas mensagens (o dia inteiro)
+  conversasAtendidas?: number;
+  mensagensEnviadas?: number;
 };
 
 export type DashboardDateRange = {
@@ -131,12 +135,16 @@ export async function calculateTicketStatistics(
   // comercial: tempos medidos pelas mensagens dos vendedores (PainelComercial.ts)
   if (isPainelComercial(companyId)) {
     const vendedores = await vendedoresDoPainel(companyId);
-    const tempos = somarTempos(
-      await metricasDoPeriodo(companyId, start, end),
-      vendedores.flatMap(v => v.conexoes)
-    );
+    const dias = await metricasDoPeriodo(companyId, start, end);
+    const conexoes = vendedores.flatMap(v => v.conexoes);
+    const tempos = somarTempos(dias, conexoes);
     ticketStatistics.avgWaitTime = tempos.esperaSeg;
     ticketStatistics.avgServiceTime = tempos.atendimentoSeg;
+    // no comercial ninguem finaliza conversa: "resolvidos" e "novos contatos"
+    // ficavam zerados; o painel mostra estas no lugar
+    const contagens = somarContagens(dias, conexoes);
+    ticketStatistics.conversasAtendidas = contagens.conversasAtendidas;
+    ticketStatistics.mensagensEnviadas = contagens.mensagensEnviadas;
   }
 
   return ticketStatistics;
@@ -329,9 +337,11 @@ export async function userReport(companyId: number, start: Date, end: Date) {
   return result.map(r => {
     const linha = r.get({ plain: true }) as unknown as UserStatistics;
     const vendedor = vendedores.find(v => v.id === Number(linha.id));
-    const tempos = somarTempos(dias, vendedor ? vendedor.conexoes : []);
+    const conexoes = vendedor ? vendedor.conexoes : [];
+    const tempos = somarTempos(dias, conexoes);
     return {
       ...linha,
+      ...somarContagens(dias, conexoes),
       avgWaitTime: tempos.esperaSeg,
       avgServiceTime: tempos.atendimentoSeg
     };
