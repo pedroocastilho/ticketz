@@ -35,7 +35,22 @@ export type DashboardDateRange = {
   hour_from?: string;
   hour_to?: string;
   tz?: string;
+  // ids de usuario escondidos pelo olho, separados por virgula (2026-11-02):
+  // os totais do painel somam so quem esta visivel
+  ocultos?: string;
 };
+
+export const idsOcultos = (valor: unknown): number[] =>
+  String(valor || "")
+    .split(",")
+    .map(s => Number(s.trim()))
+    .filter(n => Number.isInteger(n) && n > 0);
+
+// conversa (Ticket/TicketTraking) de usuario oculto nao entra nos totais
+const semOcultos = (ocultos: number[]) =>
+  ocultos.length
+    ? { [Op.or]: [{ userId: null }, { userId: { [Op.notIn]: ocultos } }] }
+    : {};
 
 type TicketsStatisticsData = {
   ticketCounters: {
@@ -74,7 +89,8 @@ type UserReportData = {
 export async function calculateTicketStatistics(
   companyId: number,
   start: Date,
-  end: Date
+  end: Date,
+  ocultos: number[] = []
 ): Promise<TicketTrackingStatistics> {
   const ticketStatistics = (await TicketTraking.findOne({
     attributes: [
@@ -90,7 +106,8 @@ export async function calculateTicketStatistics(
       },
       finishedAt: {
         [Op.between]: [start, end]
-      }
+      },
+      ...semOcultos(ocultos)
     },
     raw: true
   })) as unknown as TicketTrackingStatistics;
@@ -118,6 +135,7 @@ export async function calculateTicketStatistics(
         AND (tt."companyId" = :companyId)
         AND (tt."finishedAt" BETWEEN :startDate AND :endDate)
         AND (c."createdAt" BETWEEN :startDate AND :endDate)
+        AND (tt."userId" IS NULL OR tt."userId" NOT IN (:ocultos))
   ) counters_list GROUP BY "contactId") counters_totals
   `;
 
@@ -125,7 +143,8 @@ export async function calculateTicketStatistics(
     replacements: {
       companyId,
       startDate: start,
-      endDate: end
+      endDate: end,
+      ocultos: ocultos.length ? ocultos : [0]
     },
     type: QueryTypes.SELECT
   })) as unknown as [{ count: number }];
@@ -134,7 +153,9 @@ export async function calculateTicketStatistics(
 
   // comercial: tempos medidos pelas mensagens dos vendedores (PainelComercial.ts)
   if (isPainelComercial(companyId)) {
-    const vendedores = await vendedoresDoPainel(companyId);
+    const vendedores = (await vendedoresDoPainel(companyId)).filter(
+      v => !ocultos.includes(v.id)
+    );
     const dias = await metricasDoPeriodo(companyId, start, end);
     const conexoes = vendedores.flatMap(v => v.conexoes);
     const tempos = somarTempos(dias, conexoes);
@@ -150,13 +171,40 @@ export async function calculateTicketStatistics(
   return ticketStatistics;
 }
 
-export async function ticketsStatusSummary(companyId: number) {
+export async function ticketsStatusSummary(
+  companyId: number,
+  ocultos: number[] = []
+) {
   const where: WhereOptions<Ticket> = {
     companyId,
     status: {
       [Op.or]: ["open", "pending"]
     }
   };
+  if (ocultos.length) {
+    // comercial: as conversas no numero de quem esta oculto tambem saem
+    // (aguardando nao tem dono, mas e do numero do vendedor)
+    const conexoes = isPainelComercial(companyId)
+      ? (await vendedoresDoPainel(companyId))
+          .filter(v => ocultos.includes(v.id))
+          .flatMap(v => v.conexoes)
+      : [];
+    Object.assign(where, {
+      [Op.and]: [
+        semOcultos(ocultos),
+        ...(conexoes.length
+          ? [
+              {
+                [Op.or]: [
+                  { whatsappId: null },
+                  { whatsappId: { [Op.notIn]: conexoes } }
+                ]
+              }
+            ]
+          : [])
+      ]
+    });
+  }
 
   const groupsEnabled =
     (await GetCompanySetting(companyId, "groupsTab", "disabled")) === "enabled";
@@ -348,9 +396,12 @@ export async function userReport(companyId: number, start: Date, end: Date) {
   });
 }
 
-export async function statusSummaryService(companyId: number) {
+export async function statusSummaryService(
+  companyId: number,
+  ocultos: number[] = []
+) {
   return {
-    ticketsStatusSummary: await ticketsStatusSummary(companyId),
+    ticketsStatusSummary: await ticketsStatusSummary(companyId, ocultos),
     usersStatusSummary: await usersStatusSummary(companyId)
   };
 }
@@ -384,7 +435,12 @@ export async function ticketsStatisticsService(
       ),
       close: await listCounterSerie(companyId, "ticket-close", start, end)
     },
-    ticketStatistics: await calculateTicketStatistics(companyId, start, end)
+    ticketStatistics: await calculateTicketStatistics(
+      companyId,
+      start,
+      end,
+      idsOcultos(params.ocultos)
+    )
   };
 }
 

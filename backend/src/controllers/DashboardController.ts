@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 
 import {
   DashboardDateRange,
+  idsOcultos,
   statusSummaryService,
   ticketsStatisticsService,
   usersReportService
@@ -35,6 +36,10 @@ export const statusSummary = async (
 ): Promise<Response> => {
   const { companyId } = req.user;
 
-  const dashboardData = await statusSummaryService(companyId);
+  // ocultos: totais so de quem esta visivel no painel (olho)
+  const dashboardData = await statusSummaryService(
+    companyId,
+    idsOcultos(req.query.ocultos)
+  );
   return res.status(200).json(dashboardData);
 };

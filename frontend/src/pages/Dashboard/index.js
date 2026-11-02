@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 
 import Paper from "@material-ui/core/Paper";
 import Container from "@material-ui/core/Container";
@@ -9,6 +9,7 @@ import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
 import TextField from "@material-ui/core/TextField";
 import Typography from "@material-ui/core/Typography";
+import Alert from "@material-ui/lab/Alert";
 
 // ICONS
 import GroupAddIcon from "@material-ui/icons/GroupAdd";
@@ -20,9 +21,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
 import { toast } from "react-toastify";
 
-import TableAttendantsStatus, {
-  OCULTO
-} from "../../components/Dashboard/TableAttendantsStatus";
+import TableAttendantsStatus from "../../components/Dashboard/TableAttendantsStatus";
 import GestoresPainel from "../../components/Dashboard/GestoresPainel";
 import BlogFeedCarousel from "../../components/Dashboard/BlogFeedCarousel";
 
@@ -324,14 +323,23 @@ const Dashboard = () => {
         ? ocultos.filter(x => !ids.includes(x))
         : [...new Set([...ocultos, ...ids])]
     );
-  // alguem escondido no painel: os totais do time somem junto (dariam para
-  // deduzir os numeros de quem foi escondido)
-  const idsNoPainel = [
-    ...(usersData.userReport || []),
-    ...(usersData.gestores || [])
-  ].map(u => u.id);
-  const ocultarTotais = ocultos.some(id => idsNoPainel.includes(id));
-  const total = valor => (ocultarTotais ? OCULTO : valor);
+  // alguem escondido no painel (2026-11-02, pedido do Pedro): os totais somam
+  // so quem esta visivel (o backend recebe os ocultos) e um aviso diz quem
+  // ficou de fora. O grafico de atendimentos nao separa por pessoa: fica
+  // embacado enquanto algum vendedor estiver oculto.
+  const ocultosRef = useRef(ocultos);
+  ocultosRef.current = ocultos;
+  const vendedoresOcultos = (usersData.userReport || []).filter(u =>
+    ocultos.includes(u.id)
+  );
+  const ocultarTotais = vendedoresOcultos.length > 0;
+  const total = valor => valor;
+  const nomesOcultos = vendedoresOcultos.map(u => u.name);
+  const avisoOcultos = !nomesOcultos.length
+    ? null
+    : nomesOcultos.length === 1
+      ? `${nomesOcultos[0]} não está contando nos totais (números ocultos). Clique no olho ao lado do nome para somar junto.`
+      : `${nomesOcultos.slice(0, -1).join(", ")} e ${nomesOcultos[nomesOcultos.length - 1]} não estão contando nos totais (números ocultos). Clique no olho ao lado de cada nome para somar junto.`;
   // painel do comercial: o backend manda as contagens pelas mensagens
   const comercial =
     ticketsData.ticketStatistics?.conversasAtendidas !== undefined;
@@ -398,7 +406,9 @@ const Dashboard = () => {
 
   async function updateStatus() {
     api
-      .get("/dashboard/status")
+      .get("/dashboard/status", {
+        params: { ocultos: ocultosRef.current.join(",") }
+      })
       .then(result => {
         const { data } = result;
 
@@ -462,7 +472,10 @@ const Dashboard = () => {
   }
 
   async function fetchData() {
-    let params = { tz: getTimezoneOffset() };
+    let params = {
+      tz: getTimezoneOffset(),
+      ocultos: ocultosRef.current.join(",")
+    };
 
     // Hoje / Ontem: o dia inteiro (2026-11-02, metricas diarias do comercial)
     const diaInteiro = { hoje: 0, ontem: 1 }[period];
@@ -529,6 +542,18 @@ const Dashboard = () => {
   useEffect(() => {
     updateStatus();
   }, []);
+
+  // olho aberto/fechado: os totais refazem a soma sem quem esta oculto
+  const primeiraVez = useRef(true);
+  useEffect(() => {
+    if (primeiraVez.current) {
+      primeiraVez.current = false;
+      return;
+    }
+    fetchData();
+    updateStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ocultos.join(",")]);
 
   function renderFilters() {
     return (
@@ -788,6 +813,12 @@ const Dashboard = () => {
 
           {/* FILTROS */}
           {renderFilters()}
+
+          {avisoOcultos && (
+            <Grid item xs={12}>
+              <Alert severity="info">{avisoOcultos}</Alert>
+            </Grid>
+          )}
 
           {/* ATENDIMENTOS REALIZADOS (comercial: conversas atendidas, porque
               ninguem finaliza conversa e "resolvidos" ficava sempre zerado) */}
