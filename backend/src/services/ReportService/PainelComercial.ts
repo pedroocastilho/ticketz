@@ -2,6 +2,10 @@ import { QueryTypes } from "sequelize";
 import { DateTime } from "luxon";
 import sequelize from "../../database";
 import { nomeFilaLivres } from "../../helpers/VacuoComercial";
+import {
+  sqlSessaoOnline,
+  toleranciaOnlineMin
+} from "../../helpers/OnlineTolerancia";
 import MetricasAtendimentoService, {
   horarioDoAmbiente
 } from "../CrmServices/MetricasAtendimentoService";
@@ -114,11 +118,14 @@ export function somarContagens(
 // tempo conectado: uniao das sessoes (varias abas ao mesmo tempo contam uma
 // vez) dentro de [de, ate], separada por dia no fuso; media = por dia com
 // alguma conexao
+// lacunaMs (2026-11-03): intervalo menor que isso entre duas sessoes conta como conectado (trocar de pagina no CRM
+// fecha e reabre a conexao do Ticketz embutido; sem isso o tempo da gestao ficava picotado). 0 = como antes.
 export function tempoConectadoPorDia(
   sessoes: Sessao[],
   fuso: string,
   de: Date,
-  ate: Date
+  ate: Date,
+  lacunaMs = 0
 ): TempoConectado {
   const porDia = new Map<string, Array<[number, number]>>();
   sessoes.forEach(s => {
@@ -145,7 +152,7 @@ export function tempoConectadoPorDia(
     intervalos.sort((a, b) => a[0] - b[0]);
     let [aIni, aFim] = intervalos[0];
     intervalos.slice(1).forEach(([i, f]) => {
-      if (i <= aFim) {
+      if (i <= aFim + lacunaMs) {
         aFim = Math.max(aFim, f);
       } else {
         somaMs += aFim - aIni;
@@ -235,13 +242,14 @@ export async function gestoresComercial(
   if (!lista.length) return [];
   const agora = new Date();
   const ate = end.getTime() < agora.getTime() ? end : agora;
+  const tolerancia = toleranciaOnlineMin(companyId, env);
 
   const usuarios: Array<{ id: number; name: string; online: boolean }> =
     await sequelize.query(
       `
         SELECT u.id, u.name,
                EXISTS (SELECT 1 FROM "UserSocketSessions" s
-                        WHERE s."userId" = u.id AND s.active = true) AS online
+                        WHERE s."userId" = u.id AND ${sqlSessaoOnline("s", tolerancia)}) AS online
           FROM "Users" u
          WHERE u."companyId" = :companyId AND u.id IN (:lista)
          ORDER BY u.name
@@ -274,7 +282,8 @@ export async function gestoresComercial(
         .map(s => ({ inicio: new Date(s.inicio), fim: new Date(s.fim) })),
       horario.timezone,
       start,
-      ate
+      ate,
+      tolerancia * 60000
     );
     return {
       id: Number(u.id),

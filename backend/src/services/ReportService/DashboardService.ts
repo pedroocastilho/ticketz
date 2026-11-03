@@ -6,6 +6,10 @@ import User from "../../models/User";
 import TicketTraking from "../../models/TicketTraking";
 import sequelize from "../../database";
 import {
+  sqlSessaoOnline,
+  toleranciaOnlineMin
+} from "../../helpers/OnlineTolerancia";
+import {
   listCounterSerie,
   TicketCounterSeries
 } from "../CounterServices/ListCounterSerie";
@@ -230,6 +234,11 @@ export async function ticketsStatusSummary(
 }
 
 export async function usersStatusSummary(companyId) {
+  // comercial: quem saiu ha poucos minutos (trocou de pagina no CRM) continua online (helpers/OnlineTolerancia.ts)
+  const onlineSql = sqlSessaoOnline(
+    `"UserSocketSessions"`,
+    toleranciaOnlineMin(companyId)
+  );
   // comercial: so os vendedores do painel (sem quem saiu do time e sem gestores)
   const soVendedores = isPainelComercial(companyId)
     ? { id: { [Op.in]: (await vendedoresDoPainel(companyId)).map(v => v.id) } }
@@ -243,7 +252,7 @@ export async function usersStatusSummary(companyId) {
           SELECT COUNT(*)
           FROM "UserSocketSessions"
           WHERE "UserSocketSessions"."userId" = "User"."id"
-            AND "UserSocketSessions"."active" = true
+            AND ${onlineSql}
         ) > 0`),
         "online"
       ],
@@ -273,6 +282,10 @@ export async function usersStatusSummary(companyId) {
 }
 
 export async function userReport(companyId: number, start: Date, end: Date) {
+  const onlineSql = sqlSessaoOnline(
+    `"UserSocketSessions"`,
+    toleranciaOnlineMin(companyId)
+  );
   // comercial: so vendedor com fila, com os tempos medidos pelas mensagens
   const comercial = isPainelComercial(companyId);
   const vendedores = comercial ? await vendedoresDoPainel(companyId) : [];
@@ -327,7 +340,7 @@ export async function userReport(companyId: number, start: Date, end: Date) {
           SELECT COUNT(*)>0
           FROM "UserSocketSessions"
           WHERE "UserSocketSessions"."userId" = "User"."id"
-            AND "UserSocketSessions"."active" = true
+            AND ${onlineSql}
         )`),
         "online"
       ]

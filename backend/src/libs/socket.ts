@@ -54,6 +54,7 @@ import UserSocketSession from "../models/UserSocketSession";
 import { GetCompanySetting } from "../helpers/CheckSettings";
 import { DecoupledDriverServices } from "../services/DecoupledDriverServices/DecoupledDriverServices";
 import { corsOrigin } from "../helpers/corsOrigin";
+import { toleranciaOnlineMin } from "../helpers/OnlineTolerancia";
 
 const decoupledDriverServices = DecoupledDriverServices.getInstance();
 
@@ -72,9 +73,16 @@ const joinTicketChannel = async (
   logger.debug(`joinChatbox[${c}]: Channel: ${ticketId} by user ${user.id}`);
 };
 
+// sessoes de socket abertas do usuario (online = pelo menos uma)
+const contarSessoesAtivas = (userId: number): Promise<number> =>
+  UserSocketSession.count({ where: { userId, active: true } });
+
+// 2026-11-03: supervisores (gestao, ex.: Bia) tambem recebem a mudanca de online na hora, pela sala
+// company-<id>-online (so este evento passa por ela); antes so admin recebia e o painel deles congelava
 const notifyOnlineChange = (companyId: number, userId: number, online) => {
   io.to("super")
     .to(`company-${companyId}-admin`)
+    .to(`company-${companyId}-online`)
     .emit("userOnlineChange", { userId, online });
 };
 
@@ -153,10 +161,23 @@ export const initIO = (httpServer: Server): SocketIO => {
         { where: { id: socket.id } }
       ).then(async () => {
         logger.debug(`finished session ${socket.id} for user ${userId}`);
-        const activeSessionsCount = await UserSocketSession.count({
-          where: { userId, active: true }
-        });
-        notifyOnlineChange(user.companyId, user.id, activeSessionsCount > 0);
+        const activeSessionsCount = await contarSessoesAtivas(userId);
+        // comercial (helpers/OnlineTolerancia.ts): sem conexao aberta, so avisa "offline" depois da tolerancia e se a
+        // pessoa nao voltou (trocar de pagina no CRM fecha e reabre o Ticketz embutido)
+        const toleranciaMin = toleranciaOnlineMin(user.companyId);
+        if (activeSessionsCount > 0 || !toleranciaMin) {
+          notifyOnlineChange(user.companyId, user.id, activeSessionsCount > 0);
+          return;
+        }
+        setTimeout(async () => {
+          try {
+            if ((await contarSessoesAtivas(userId)) === 0) {
+              notifyOnlineChange(user.companyId, user.id, false);
+            }
+          } catch (e) {
+            logger.debug(`online: ${e?.message}`);
+          }
+        }, toleranciaMin * 60000);
       });
     });
 
@@ -169,6 +190,10 @@ export const initIO = (httpServer: Server): SocketIO => {
 
     if (user.profile === "admin") {
       socket.join(`company-${user.companyId}-admin`);
+    }
+
+    if (user.profile === "supervisor") {
+      socket.join(`company-${user.companyId}-online`);
     }
 
     const canAccessBackendlog = user.super || tokenData?.impersonated === true;
