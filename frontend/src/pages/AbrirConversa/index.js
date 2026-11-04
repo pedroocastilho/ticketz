@@ -44,7 +44,8 @@ const AbrirConversa = () => {
       .catch(err => {
         const codigo = err?.response?.data?.error || err?.response?.data?.message;
         setCodigoErro(codigo || null);
-        setErro(MENSAGENS[codigo] || `Nao consegui abrir a conversa (${codigo || "erro"}).`);
+        // lead de outro vendedor: a mensagem do servidor ja diz de quem e
+        setErro(MENSAGENS[codigo] || (/^Este lead/.test(codigo || "") ? codigo : `Nao consegui abrir a conversa (${codigo || "erro"}).`));
       });
   }, [user, numero, location.search, history]);
 

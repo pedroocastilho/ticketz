@@ -9,6 +9,7 @@ import User from "../../models/User";
 import { CheckNumberAndCreateContact } from "../WbotServices/CheckNumber";
 import CreateTicketService from "../TicketServices/CreateTicketService";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
+import { conferirTravaDono } from "./TravaDonoService";
 
 // Botao "Chamar no WhatsApp" do CRM (Magnus): o link /abrir/<numero> chega aqui
 // com o atendente logado e devolve a conversa para a tela abrir.
@@ -123,6 +124,9 @@ const AbrirConversaCrmService = async ({
     }
     return { uuid: aberta.uuid, criada: false };
   }
+
+  // comecar conversa nova: lead de outro vendedor nao pode (abrir a que ja existe, acima, pode)
+  await conferirTravaDono({ companyId, userId, numero: contato.number });
 
   const nova = await CreateTicketService({
     contactId: contato.id,

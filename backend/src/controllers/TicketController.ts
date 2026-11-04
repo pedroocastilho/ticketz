@@ -4,6 +4,8 @@ import { getIO } from "../libs/socket";
 import Ticket from "../models/Ticket";
 
 import CreateTicketService from "../services/TicketServices/CreateTicketService";
+import { conferirTravaDono, isTravaDonoEnabled } from "../services/CrmServices/TravaDonoService";
+import Contact from "../models/Contact";
 import DeleteTicketService from "../services/TicketServices/DeleteTicketService";
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUIDService";
@@ -166,6 +168,21 @@ export const kanban = async (
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { contactId, userId, queueId, whatsappId }: TicketData = req.body;
   const { companyId } = req.user;
+
+  // Nova conversa: vendedor nao comeca conversa com lead de outro vendedor
+  if (req.user.profile === "user" && isTravaDonoEnabled(companyId)) {
+    const contato = await Contact.findOne({
+      where: { id: contactId, companyId },
+      attributes: ["number", "isGroup"]
+    });
+    if (contato && !contato.isGroup) {
+      await conferirTravaDono({
+        companyId,
+        userId: Number(req.user.id),
+        numero: contato.number
+      });
+    }
+  }
 
   const ticket = await CreateTicketService({
     contactId,
