@@ -46,6 +46,11 @@ import {
 import WhatsMarked from "react-whatsmarked";
 import PdfPreview from "../PdfPreview";
 import MessageOptionsMenu from "../MessageOptionsMenu";
+import {
+  ehDeOutraConversa,
+  indicesDeTroca,
+  rotuloDaTroca
+} from "./trocaAtendimento";
 import whatsBackground from "../../assets/wa-background.png";
 import whatsBackgroundDark from "../../assets/wa-background-dark.png";
 import MediaGalleryLightbox, {
@@ -420,6 +425,18 @@ const useStyles = makeStyles(theme => ({
     marginLeft: "0px"
   },
 
+  trocaAtendimento: {
+    textAlign: "center",
+    alignSelf: "center",
+    maxWidth: "90%",
+    backgroundColor: theme.palette.backgroundContrast.paper,
+    color: theme.palette.textCommon.main,
+    margin: "10px",
+    padding: 8,
+    borderRadius: "10px",
+    boxShadow: `0 1px 1px ${theme.palette.backgroundContrast.border}`
+  },
+
   ackIcons: {
     fontSize: 18,
     verticalAlign: "middle",
@@ -729,6 +746,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, markAsRead, readOnly }) => {
   }, [messagesList]);
   const [nextId, setNextId] = useState(null);
   const [hasMore, setHasMore] = useState(false);
+  const [historicoContato, setHistoricoContato] = useState(false);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef();
   const stickedRef = useRef();
@@ -764,6 +782,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, markAsRead, readOnly }) => {
           if (currentTicketId.current === ticketId) {
             dispatch({ type: "LOAD_MESSAGES", payload: data.messages });
             setHasMore(data.hasMore);
+            setHistoricoContato(!!data.historicoContato);
             setNextId(data.nextId || null);
             setLoading(false);
           }
@@ -1794,6 +1813,23 @@ const MessagesList = ({ ticket, ticketId, isGroup, markAsRead, readOnly }) => {
   };
 
   const renderMessages = () => {
+    const trocasDeAtendimento = historicoContato
+      ? indicesDeTroca(messagesList)
+      : new Set();
+    // mensagem de outra conversa do contato saiu por outro numero: da para ler, mas
+    // o WhatsApp nao deixa responder, editar nem apagar por este
+    const semOpcoes = message =>
+      readOnly ||
+      (historicoContato && ehDeOutraConversa(message, ticketId));
+    const renderTrocaDeAtendimento = (message, index) =>
+      trocasDeAtendimento.has(index) && (
+        <span
+          className={classes.trocaAtendimento}
+          key={`troca-${message.id}`}
+        >
+          {rotuloDaTroca(message)}
+        </span>
+      );
     const stickedMessages = [];
     const viewMessagesList = messagesList.map((message, index) => {
       if (message.mediaType === "reactionMessage") {
@@ -1808,6 +1844,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, markAsRead, readOnly }) => {
         const messageFragment = (
           <React.Fragment key={message.id}>
             {renderDailyTimestamps(message, index)}
+            {renderTrocaDeAtendimento(message, index)}
             {renderMessageDivider(message, index)}
             <div
               id={message.id}
@@ -1818,7 +1855,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, markAsRead, readOnly }) => {
               ]}
               title={message.queueId && message.queue?.name}
             >
-              {readOnly || (
+              {semOpcoes(message) || (
                 <IconButton
                   variant="contained"
                   size="small"
@@ -1927,6 +1964,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, markAsRead, readOnly }) => {
         return (
           <React.Fragment key={message.id}>
             {renderDailyTimestamps(message, index)}
+            {renderTrocaDeAtendimento(message, index)}
             {renderMessageDivider(message, index)}
             <div
               id={message.id}
@@ -1937,7 +1975,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, markAsRead, readOnly }) => {
               ]}
               title={message.queueId && message.queue?.name}
             >
-              {readOnly || (
+              {semOpcoes(message) || (
                 <IconButton
                   variant="contained"
                   size="small"

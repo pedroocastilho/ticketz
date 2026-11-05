@@ -5,6 +5,7 @@ import User from "../models/User";
 import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
 import { soConexaoPropria } from "./ConexaoPropria";
+import { nomeFilaLivres } from "./VacuoComercial";
 
 interface Request {
   companyId: number;
@@ -43,11 +44,15 @@ const GetUserWhatsApp = async ({
 }: Request): Promise<Whatsapp> => {
   const user = userId
     ? await User.findByPk(userId, {
-        include: [{ model: Queue, as: "queues", attributes: ["id"] }]
+        include: [{ model: Queue, as: "queues", attributes: ["id", "name"] }]
       })
     : null;
-  const userQueueIds = (user?.queues || []).map(q => q.id);
   const restrito = !!user && soConexaoPropria(user);
+  // a fila comum (Livres) e de todos, mas o numero de quem saiu fica ligado a ela:
+  // isso nao faz dele o numero do vendedor
+  const userQueueIds = (user?.queues || [])
+    .filter(q => !restrito || q.name !== nomeFilaLivres())
+    .map(q => q.id);
   const doVendedor = (w: Whatsapp): boolean =>
     (w.queues || []).some(q => userQueueIds.includes(q.id));
 

@@ -74,6 +74,34 @@ describe("GetUserWhatsApp: vendedor com conexao propria", () => {
   });
 });
 
+describe("GetUserWhatsApp: fila comum (Livres)", () => {
+  const LIVRES = { id: 20, name: "Livres (sem resposta)" };
+  const jackeline = {
+    id: 15,
+    profile: "user",
+    companyId: 2,
+    queues: [LIVRES, { id: 12, name: "Jackeline" }]
+  };
+  // o numero do Fellipe, que saiu, ficou ligado a fila comum
+  const NUMERO_DO_FELLIPE = conexao(17, 20);
+
+  it("numero dela conectado: sai pelo dela, mesmo informando a fila comum", async () => {
+    userFindByPk.mockResolvedValue(jackeline);
+    conectadas([NUMERO_DO_FELLIPE, JACKELINE]);
+    expect(
+      (await GetUserWhatsApp({ companyId: 2, userId: 15, queueId: 20 })).id
+    ).toBe(15);
+  });
+
+  it("numero dela desconectado: erro, nunca o numero ligado a fila comum", async () => {
+    userFindByPk.mockResolvedValue(jackeline);
+    conectadas([NUMERO_DO_FELLIPE]);
+    await expect(
+      GetUserWhatsApp({ companyId: 2, userId: 15, queueId: 12 })
+    ).rejects.toMatchObject({ message: "ERR_WAPP_NOT_CONNECTED" });
+  });
+});
+
 describe("GetUserWhatsApp: quem continua como antes", () => {
   it("admin sem fila: conexao padrao", async () => {
     userFindByPk.mockResolvedValue(admin);

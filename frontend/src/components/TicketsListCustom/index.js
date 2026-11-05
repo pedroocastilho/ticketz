@@ -466,10 +466,11 @@ const TicketsListCustom = props => {
 
   useEffect(() => {
     if (typeof updateCount === "function") {
-      updateCount(ticketsList.length);
+      // com mais conversas para carregar, o numero e so o que ja veio: "40+"
+      updateCount(hasMore ? `${ticketsList.length}+` : ticketsList.length);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticketsList]);
+  }, [ticketsList, hasMore]);
 
   const loadMore = () => {
     const lastTicket = ticketsList[ticketsList.length - 1];
@@ -535,19 +536,19 @@ const TicketsListCustom = props => {
   const carregarMais = () => {
     const lastTicket = ticketsList[ticketsList.length - 1];
     if (
-      lastTicket &&
-      paginationCursor.nextUpdatedAt === lastTicket.updatedAt &&
-      paginationCursor.nextTicketId === lastTicket.id
+      !lastTicket ||
+      (paginationCursor.nextUpdatedAt === lastTicket.updatedAt &&
+        paginationCursor.nextTicketId === lastTicket.id)
     ) {
       refetchTickets();
     } else {
       loadMore();
     }
   };
-  const talvezTenhaMais = !loading && ticketsList.length >= 40;
+  const talvezTenhaMais = !loading && hasMore;
 
   const handleScroll = e => {
-    if (loading) return;
+    if (loading || !hasMore) return;
 
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
 

@@ -5,6 +5,7 @@ import {
   col,
   Filterable,
   Includeable,
+  Order,
   WhereOptions
 } from "sequelize";
 import { startOfDay, endOfDay, parseISO } from "date-fns";
@@ -27,6 +28,7 @@ interface Request {
   isSearch?: boolean;
   searchParam?: string;
   nextUpdatedAt?: string;
+  nextTicketId?: string;
   status?: string;
   groups?: string;
   date?: string;
@@ -47,12 +49,46 @@ interface Request {
 interface Response {
   tickets: Ticket[];
   count: number | null;
+  hasMore: boolean;
 }
+
+const CONVERSAS_POR_PAGINA = 40;
+
+// horario da conversa em milissegundos, a precisao que a tela conhece: um repasse
+// em massa grava centenas de conversas no mesmo instante (185 conversas empatadas
+// em 05/11/2026) e o cursor so por horario pulava todas as outras do empate
+const horarioDaConversa = () =>
+  fn("date_trunc", "milliseconds", col("Ticket.updatedAt"));
+
+const ORDEM_DA_LISTA: Order = [
+  [horarioDaConversa(), "DESC"],
+  ["id", "DESC"]
+];
+
+const depoisDoCursor = (
+  horario: Date,
+  ticketId: number
+): WhereOptions<Ticket> => {
+  const maisAntiga = where(horarioDaConversa(), "<", horario as any);
+  if (!ticketId) return maisAntiga;
+  return {
+    [Op.or]: [
+      maisAntiga,
+      {
+        [Op.and]: [
+          where(horarioDaConversa(), "=", horario as any),
+          { id: { [Op.lt]: ticketId } }
+        ]
+      }
+    ]
+  };
+};
 
 const ListTicketsService = async ({
   isSearch = false,
   searchParam = "",
   nextUpdatedAt,
+  nextTicketId,
   queueIds,
   contactId,
   tags,
@@ -113,9 +149,9 @@ const ListTicketsService = async ({
   if (groupsTab) {
     whereCondition.isGroup = groups === "true";
   }
-  let includeCondition: Includeable[];
-
-  includeCondition = [
+  // o que aparece na lista. Etiquetas e campos do contato multiplicam as linhas da
+  // consulta, entao nao podem entrar na escolha da pagina (ver fim do arquivo)
+  const includeCondition: Includeable[] = [
     {
       model: Contact,
       as: "contact",
@@ -177,15 +213,18 @@ const ListTicketsService = async ({
     };
   }
 
+  // so o que o filtro da busca precisa, sem trazer nada desses registros
+  let includeDoFiltro: Includeable[] = [];
+
   if (searchParam) {
     const sanitizedSearchParam = searchParam.toLocaleLowerCase().trim();
 
-    includeCondition = [
-      ...includeCondition,
+    includeDoFiltro = [
+      { model: Contact, as: "contact", attributes: [] },
       {
         model: Message,
         as: "messages",
-        attributes: ["id", "body"],
+        attributes: [],
         where: {
           body: where(
             fn("LOWER", col("body")),
@@ -319,8 +358,6 @@ const ListTicketsService = async ({
     };
   }
 
-  const limit = all ? undefined : 40;
-
   if (!all && nextUpdatedAt) {
     const parsedNextUpdatedAt = new Date(nextUpdatedAt);
 
@@ -328,9 +365,7 @@ const ListTicketsService = async ({
       throw new AppError("ERR_INVALID_NEXT_UPDATED_AT", 400);
     }
 
-    andedOrs.push({
-      updatedAt: { [Op.lt]: parsedNextUpdatedAt }
-    });
+    andedOrs.push(depoisDoCursor(parsedNextUpdatedAt, Number(nextTicketId)));
   }
 
   if (minUpdatedAt) {
@@ -357,20 +392,37 @@ const ListTicketsService = async ({
     companyId
   };
 
-  const tickets = await Ticket.findAll({
+  // O limite precisa contar conversas. Com etiquetas e campos do contato no mesmo
+  // SELECT ele contava linhas: cada conversa ocupava ate 10, e as 40 da pagina viravam
+  // 5 (fila da Jackeline, 235 conversas, em 05/11/2026). Primeiro escolhe a pagina;
+  // depois carrega os dados so dessas conversas. Pede uma a mais para saber se ha outra.
+  const pagina = await Ticket.findAll({
     where: whereCondition,
-    include: includeCondition,
-    limit,
-    order: [
-      ["updatedAt", "DESC"],
-      ["id", "DESC"]
-    ],
+    include: includeDoFiltro,
+    attributes: ["id"],
+    limit: all ? undefined : CONVERSAS_POR_PAGINA + 1,
+    order: ORDEM_DA_LISTA,
+    group: searchParam ? ["Ticket.id"] : undefined,
     subQuery: false
   });
 
+  const hasMore = !all && pagina.length > CONVERSAS_POR_PAGINA;
+  const ids = (hasMore ? pagina.slice(0, CONVERSAS_POR_PAGINA) : pagina).map(
+    ticket => ticket.id
+  );
+
+  const tickets = ids.length
+    ? await Ticket.findAll({
+        where: { id: { [Op.in]: ids } },
+        include: includeCondition,
+        order: ORDEM_DA_LISTA
+      })
+    : [];
+
   return {
     tickets,
-    count: null
+    count: null,
+    hasMore
   };
 };
 

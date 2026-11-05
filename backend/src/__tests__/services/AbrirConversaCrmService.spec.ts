@@ -1,7 +1,26 @@
 import {
+  filaPropriaDoVendedor,
   normalizarNumero,
   variantesDoNumero
 } from "../../services/CrmServices/AbrirConversaCrmService";
+
+describe("filaPropriaDoVendedor", () => {
+  const livres = { id: 9, name: "Livres (sem resposta)" };
+  const dela = { id: 4, name: "Jackeline" };
+
+  it("Chamar no WhatsApp nunca cria a conversa na fila Livres", () => {
+    expect(filaPropriaDoVendedor([livres, dela])).toBe(4);
+    expect(filaPropriaDoVendedor([dela, livres])).toBe(4);
+  });
+
+  it("sem outra fila, fica com a unica que tem", () => {
+    expect(filaPropriaDoVendedor([livres])).toBe(9);
+  });
+
+  it("sem fila nenhuma: null", () => {
+    expect(filaPropriaDoVendedor([])).toBeNull();
+  });
+});
 
 describe("normalizarNumero", () => {
   it("fica so com os digitos (o CRM manda o numero com DDI)", () => {

@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetUserWhatsApp from "../../helpers/GetUserWhatsApp";
+import { nomeFilaLivres } from "../../helpers/VacuoComercial";
 import Contact from "../../models/Contact";
 import Queue from "../../models/Queue";
 import Ticket from "../../models/Ticket";
@@ -52,6 +53,16 @@ export const variantesDoNumero = (digitos: string): string[] => {
 export const normalizarNumero = (numero: string): string =>
   String(numero || "").replace(/\D/g, "");
 
+// a fila do proprio vendedor. A comum (Livres) tambem esta na lista dele e a ordem
+// nao e garantida: usando a primeira, a Jackeline teve 87 conversas nascendo na
+// Livres, 9 delas pelo numero do Fellipe (ligado a essa fila)
+export const filaPropriaDoVendedor = (
+  filas: Array<{ id: number; name?: string }>
+): number | null => {
+  const propria = filas.find(fila => fila.name !== nomeFilaLivres());
+  return (propria || filas[0])?.id ?? null;
+};
+
 const AbrirConversaCrmService = async ({
   userId,
   companyId,
@@ -65,7 +76,7 @@ const AbrirConversaCrmService = async ({
   }
 
   const user = await User.findByPk(userId, {
-    include: [{ model: Queue, as: "queues", attributes: ["id"] }]
+    include: [{ model: Queue, as: "queues", attributes: ["id", "name"] }]
   });
   if (!user || user.companyId !== companyId) {
     throw new AppError("ERR_NO_PERMISSION", 403);
@@ -97,7 +108,7 @@ const AbrirConversaCrmService = async ({
   }
 
   if (!filasDoUsuario.length) throw new AppError("ERR_CRM_SEM_FILA", 400);
-  const queueId = filasDoUsuario[0];
+  const queueId = filaPropriaDoVendedor(user.queues);
   // conexao do atendente (a ligada a fila dele); precisa estar conectada
   const whatsapp = await GetUserWhatsApp({ companyId, userId, queueId });
 

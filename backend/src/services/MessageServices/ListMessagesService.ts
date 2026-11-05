@@ -4,7 +4,9 @@ import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import Queue from "../../models/Queue";
+import Whatsapp from "../../models/Whatsapp";
 import { GetCompanySetting } from "../../helpers/CheckSettings";
+import { isHistoricoContatoEnabled } from "../../helpers/HistoricoContato";
 
 interface Request {
   ticketId: string;
@@ -20,6 +22,7 @@ interface Response {
   count: number | null;
   hasMore: boolean;
   nextId: string | null;
+  historicoContato: boolean;
 }
 
 const ListMessagesService = async ({
@@ -37,9 +40,25 @@ const ListMessagesService = async ({
 
   const limit = 100;
 
+  // comercial: abrir a conversa mostra tudo o que ja se falou com essa pessoa, em
+  // qualquer numero (helpers/HistoricoContato.ts)
+  const historicoContato =
+    !ticket.isGroup && isHistoricoContatoEnabled(companyId);
+  const conversasDoContato: number[] = historicoContato
+    ? (
+        await Ticket.findAll({
+          where: { companyId, contactId: ticket.contactId, isGroup: false },
+          attributes: ["id"]
+        })
+      ).map(conversa => conversa.id)
+    : [];
+  const filtroConversa = historicoContato
+    ? { [Op.in]: conversasDoContato }
+    : ticketId;
+
   const options: FindOptions = {
     where: {
-      ticketId,
+      ticketId: filtroConversa,
       companyId,
       mediaType: {
         [Op.or]: {
@@ -51,6 +70,7 @@ const ListMessagesService = async ({
   };
 
   if (
+    !historicoContato &&
     queues.length > 0 &&
     (await GetCompanySetting(companyId, "messageVisibility", "message")) ===
       "message"
@@ -77,7 +97,7 @@ const ListMessagesService = async ({
     const cursorMessage = await Message.findOne({
       where: {
         id: nextId,
-        ticketId,
+        ticketId: historicoContato ? conversasDoContato : ticketId,
         companyId
       },
       attributes: ["id", "createdAt"]
@@ -110,7 +130,7 @@ const ListMessagesService = async ({
         model: Message,
         as: "replies",
         where: {
-          ticketId: ticket.id
+          ticketId: historicoContato ? conversasDoContato : ticket.id
         },
         include: ["contact"],
         required: false
@@ -118,7 +138,25 @@ const ListMessagesService = async ({
       {
         model: Queue,
         as: "queue"
-      }
+      },
+      ...(historicoContato
+        ? [
+            {
+              model: Ticket,
+              as: "ticket",
+              attributes: ["id", "queueId"],
+              required: false,
+              include: [
+                {
+                  model: Whatsapp,
+                  as: "whatsapp",
+                  attributes: ["id", "name"],
+                  required: false
+                }
+              ]
+            }
+          ]
+        : [])
     ],
     order: [["createdAt", "DESC"]]
   });
@@ -132,7 +170,8 @@ const ListMessagesService = async ({
     ticket,
     count: null,
     hasMore,
-    nextId: hasMore && oldestMessage ? oldestMessage.id : null
+    nextId: hasMore && oldestMessage ? oldestMessage.id : null,
+    historicoContato
   };
 };
 

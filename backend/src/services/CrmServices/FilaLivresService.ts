@@ -21,8 +21,9 @@ const CORES_FILA_LIVRES = [
   "#ffb74d"
 ];
 
-// acha ou cria a fila comum e garante todos os vendedores nela (perfil user com
-// alguma fila ligada a um numero); quem entrar no time depois entra sozinho
+// acha ou cria a fila comum e garante nela todos os vendedores (perfil user com
+// alguma fila ligada a um numero) e a gestao (admin e supervisor, que olham as
+// conversas de todas as filas); quem entrar no time depois entra sozinho
 export async function garantirFilaLivres(companyId: number): Promise<Queue> {
   const nome = nomeFilaLivres();
   let fila = await Queue.findOne({ where: { companyId, name: nome } });
@@ -71,9 +72,13 @@ export async function garantirFilaLivres(companyId: number): Promise<Queue> {
       u => u.userId
     )
   );
-  const faltam = [...new Set(vendedores.map(v => v.userId))].filter(
-    id => !jaNaFila.has(id)
-  );
+  const gestao = await User.findAll({
+    where: { companyId, profile: { [Op.in]: ["admin", "supervisor"] } },
+    attributes: ["id"]
+  });
+  const faltam = [
+    ...new Set([...vendedores.map(v => v.userId), ...gestao.map(g => g.id)])
+  ].filter(id => !jaNaFila.has(id));
   if (faltam.length) {
     await UserQueue.bulkCreate(
       faltam.map(userId => ({ userId, queueId: fila.id }))

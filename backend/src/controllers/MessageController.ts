@@ -64,7 +64,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     messages,
     ticket,
     hasMore,
-    nextId: responseNextId
+    nextId: responseNextId,
+    historicoContato
   } = await ListMessagesService({
     nextId,
     ticketId,
@@ -83,7 +84,14 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     SetTicketMessagesAsRead(ticket);
   }
 
-  return res.json({ count, messages, ticket, hasMore, nextId: responseNextId });
+  return res.json({
+    count,
+    messages,
+    ticket,
+    hasMore,
+    nextId: responseNextId,
+    historicoContato
+  });
 };
 
 export const historyByMessageId = async (

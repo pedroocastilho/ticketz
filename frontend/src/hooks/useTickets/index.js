@@ -23,6 +23,7 @@ const useTickets = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState([]);
+  const [hasMore, setHasMore] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -51,6 +52,7 @@ const useTickets = ({
             }
           });
           setTickets(data.tickets);
+          setHasMore(!!data.hasMore);
           setLoading(false);
         } catch (err) {
           setLoading(false);
@@ -127,6 +129,7 @@ const useTickets = ({
 
   return {
     tickets,
+    hasMore,
     loading,
     refetch,
     fetchSince
