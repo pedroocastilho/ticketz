@@ -13,6 +13,7 @@ import { businessSecondsBetween } from "./businessSeconds";
 
 interface VacuoEnv {
   VACUO_COMPANIES?: string;
+  VACUO_ETIQUETA?: string;
   VACUO_HORAS?: string;
   VACUO_FILA_NOME?: string;
   VACUO_DESDE?: string;
@@ -33,6 +34,12 @@ export const limiteVacuoSeg = (env: VacuoEnv = process.env): number => {
   const horas = Number(env.VACUO_HORAS);
   return (Number.isFinite(horas) && horas > 0 ? horas : 5) * 3600;
 };
+
+// so conversas cujo CONTATO tem esta etiqueta vao para a fila Livres (07/11/2026,
+// pedido do Pedro: so leads da Black; Ligacoes e as outras abas ficam com o
+// vendedor). O CRM poe a etiqueta (POST /crm/etiqueta-contato). Vazio = todas.
+export const etiquetaVacuo = (env: VacuoEnv = process.env): string =>
+  String(env.VACUO_ETIQUETA || "").trim();
 
 export const nomeFilaLivres = (env: VacuoEnv = process.env): string =>
   String(env.VACUO_FILA_NOME || "").trim() || "Livres (sem resposta)";

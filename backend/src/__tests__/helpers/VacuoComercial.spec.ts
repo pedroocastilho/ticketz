@@ -1,6 +1,7 @@
 import {
   destinoDoVendedor,
   estourouVacuo,
+  etiquetaVacuo,
   isVacuoEnabled,
   limiteVacuoSeg,
   nomeFilaLivres
@@ -18,6 +19,8 @@ describe("conversa no vacuo (5h sem resposta no horario do comercial)", () => {
     expect(limiteVacuoSeg({})).toBe(5 * 3600);
     expect(limiteVacuoSeg({ VACUO_HORAS: "3" })).toBe(3 * 3600);
     expect(nomeFilaLivres({})).toBe("Livres (sem resposta)");
+    expect(etiquetaVacuo({})).toBe("");
+    expect(etiquetaVacuo({ VACUO_ETIQUETA: " Black " })).toBe("Black");
   });
 
   it("conta so 8h-19h seg-sab: 10h -> 15h estoura; 16h -> 10h do dia seguinte (3h + 2h) estoura; 17h -> 9h nao", () => {

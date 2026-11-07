@@ -25,6 +25,15 @@ export const contatosSemEtiqueta = (
     .filter(c => !(c.tags || []).some(t => Number(t.id) === Number(tagId)))
     .map(c => c.id);
 
+// contatos que tem a etiqueta (para tirar)
+export const contatosComEtiqueta = (
+  contatos: Array<{ id: number; tags?: Array<{ id: number }> }>,
+  tagIds: number[]
+): number[] =>
+  contatos
+    .filter(c => (c.tags || []).some(t => tagIds.includes(Number(t.id))))
+    .map(c => c.id);
+
 // acha a etiqueta pelo nome (sem ligar para acento e maiuscula) ou cria fora do
 // kanban; etiqueta que ja existia fica como estava
 const garantirEtiquetaDeContato = async (
@@ -77,4 +86,42 @@ export async function etiquetarContatoPorNumero({
     if (atualizado) websocketUpdateContact(atualizado);
   }
   return { contatos: contatos.length, marcados: faltam.length };
+}
+
+// tira a etiqueta do contato (07/11/2026: "Lead Black" sai quando a pessoa
+// compra). Nao cria a etiqueta; contato sem ela fica como esta.
+export async function tirarEtiquetaDoContatoPorNumero({
+  companyId,
+  numero,
+  etiqueta
+}: {
+  companyId: number;
+  numero: string;
+  etiqueta: string;
+}): Promise<{ contatos: number; removidos: number }> {
+  const digitos = normalizarNumero(numero);
+  if (digitos.length < 8) return { contatos: 0, removidos: 0 };
+  const chave = chaveEtiqueta(etiqueta);
+  const tagIds = (await Tag.findAll({ where: { companyId } }))
+    .filter(t => chaveEtiqueta(t.name) === chave)
+    .map(t => t.id);
+  if (!tagIds.length) return { contatos: 0, removidos: 0 };
+  const contatos = await Contact.findAll({
+    where: {
+      companyId,
+      isGroup: false,
+      number: { [Op.in]: variantesDoNumero(digitos) }
+    },
+    include: ["tags"]
+  });
+  const com = contatosComEtiqueta(contatos, tagIds);
+  // eslint-disable-next-line no-restricted-syntax
+  for (const contactId of com) {
+    await ContactTag.destroy({ where: { contactId, tagId: tagIds } });
+    const atualizado = await Contact.findByPk(contactId, {
+      include: ["tags", "extraInfo"]
+    });
+    if (atualizado) websocketUpdateContact(atualizado);
+  }
+  return { contatos: contatos.length, removidos: com.length };
 }

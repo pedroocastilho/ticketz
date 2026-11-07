@@ -2,8 +2,11 @@ import { QueryTypes } from "sequelize";
 import sequelize from "../../database";
 import Company from "../../models/Company";
 import { logger } from "../../utils/logger";
+import Tag from "../../models/Tag";
+import { chaveEtiqueta } from "../../helpers/EtiquetaEtapa";
 import {
   estourouVacuo,
+  etiquetaVacuo,
   isVacuoEnabled,
   limiteVacuoSeg
 } from "../../helpers/VacuoComercial";
@@ -25,6 +28,20 @@ export async function devolverConversasNoVacuo(
   const horario = horarioDoAmbiente();
   const limite = limiteVacuoSeg();
 
+  // VACUO_ETIQUETA: so contatos com essa etiqueta (sem acento/maiuscula). A
+  // etiqueta ainda nao existe na empresa = ninguem vai para a fila Livres.
+  const etiqueta = etiquetaVacuo();
+  let etiquetas: number[] | null = null;
+  if (etiqueta) {
+    const chave = chaveEtiqueta(etiqueta);
+    etiquetas = (
+      await Tag.findAll({ where: { companyId }, attributes: ["id", "name"] })
+    )
+      .filter(t => chaveEtiqueta(t.name) === chave)
+      .map(t => t.id);
+    if (!etiquetas.length) return 0;
+  }
+
   // espera = primeira mensagem do cliente depois da ultima resposta humana do
   // vendedor (automatica comeca com ‎ e nao conta como resposta)
   const conversas: Array<{ id: number; esperaDesde: Date | null }> =
@@ -45,9 +62,20 @@ export async function devolverConversasNoVacuo(
            AND t."userId" IS NOT NULL
            AND t."isGroup" = false
            AND COALESCE(t."queueId", 0) <> :filaLivres
+           ${
+             etiquetas
+               ? `AND EXISTS (SELECT 1 FROM "ContactTags" ct
+                           WHERE ct."contactId" = t."contactId"
+                             AND ct."tagId" IN (:etiquetas))`
+               : ""
+           }
       `,
       {
-        replacements: { companyId, filaLivres: fila.id },
+        replacements: {
+          companyId,
+          filaLivres: fila.id,
+          etiquetas: etiquetas || [0]
+        },
         type: QueryTypes.SELECT
       }
     );

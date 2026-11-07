@@ -2,7 +2,10 @@ import { Request, Response } from "express";
 import { acessoCrmLiberado } from "../helpers/CrmWebhookToken";
 import { isEtiquetaEtapaEnabled } from "../helpers/EtiquetaEtapa";
 import { etiquetaEtapaPorNumero } from "../services/CrmServices/EtiquetaEtapaService";
-import { etiquetarContatoPorNumero } from "../services/CrmServices/EtiquetaContatoService";
+import {
+  etiquetarContatoPorNumero,
+  tirarEtiquetaDoContatoPorNumero
+} from "../services/CrmServices/EtiquetaContatoService";
 
 // POST /crm/etiqueta-etapa  { companyId, numero, etiqueta, aceitas: [...] }
 // O cartao mudou de coluna no CRM: a conversa do numero ganha a etiqueta de
@@ -58,6 +61,15 @@ export const etiquetaContato = async (
   const numero = String(corpo.numero || "");
   if (!etiqueta || etiqueta.length > 40 || !numero) {
     return res.status(400).json({ error: "ERR_INVALID_DATA" });
+  }
+  // remover: true tira a etiqueta (ex. "Lead Black" quando a pessoa compra)
+  if (corpo.remover === true) {
+    const t = await tirarEtiquetaDoContatoPorNumero({
+      companyId,
+      numero,
+      etiqueta
+    });
+    return res.status(200).json(t);
   }
   const r = await etiquetarContatoPorNumero({ companyId, numero, etiqueta });
   return res.status(200).json(r);
