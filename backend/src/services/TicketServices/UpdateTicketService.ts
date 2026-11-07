@@ -25,6 +25,8 @@ import {
 } from "../../helpers/localizeAutoMessage";
 import { destinoAoPuxarLivre } from "../CrmServices/FilaLivresService";
 import NotifyCrmWebhook from "../WebhookServices/NotifyCrmWebhook";
+import { avisarDonoNaTransferencia } from "../../helpers/DonoNaTransferencia";
+import { nomeFilaLivres } from "../../helpers/VacuoComercial";
 
 export interface UpdateTicketData {
   status?: string;
@@ -226,6 +228,7 @@ const UpdateTicketService = async ({
     const oldStatus = ticket.status;
     const oldUserId = ticket.user?.id;
     const oldQueueId = ticket.queueId;
+    const oldWhatsappId = ticket.whatsappId;
 
     // only admin can accept pending tickets that have no queue
     if (!oldQueueId && userId && oldStatus === "pending" && status === "open") {
@@ -511,8 +514,18 @@ const UpdateTicketService = async ({
 
     websocketUpdateTicket(ticket, [`user-${oldUserId}`]);
 
-    // o CRM troca o dono dos cartoes da pessoa para quem puxou (sem await)
-    if (puxouDaFilaLivre && ticket.userId) {
+    // o CRM troca o dono dos cartoes da pessoa para quem puxou da fila Livres ou
+    // para o dono do numero para onde uma pessoa transferiu (sem await)
+    const transferiuParaOutroNumero = avisarDonoNaTransferencia({
+      feitaPorPessoa: !!user,
+      puxouDaFilaLivre: !!puxouDaFilaLivre,
+      isGroup: !!isGroup,
+      conexaoAntes: oldWhatsappId,
+      conexaoDepois: ticket.whatsappId,
+      filaDepois: ticket.queue?.name,
+      nomeLivres: nomeFilaLivres()
+    });
+    if ((puxouDaFilaLivre && ticket.userId) || transferiuParaOutroNumero) {
       NotifyCrmWebhook({
         evento: "dono",
         companyId: ticket.companyId,
