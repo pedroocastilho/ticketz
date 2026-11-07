@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { acessoCrmLiberado } from "../helpers/CrmWebhookToken";
 import { isEtiquetaEtapaEnabled } from "../helpers/EtiquetaEtapa";
 import { etiquetaEtapaPorNumero } from "../services/CrmServices/EtiquetaEtapaService";
+import { etiquetarContatoPorNumero } from "../services/CrmServices/EtiquetaContatoService";
 
 // POST /crm/etiqueta-etapa  { companyId, numero, etiqueta, aceitas: [...] }
 // O cartao mudou de coluna no CRM: a conversa do numero ganha a etiqueta de
@@ -36,5 +37,28 @@ export const etiquetaEtapa = async (
     etiqueta,
     aceitas
   });
+  return res.status(200).json(r);
+};
+
+// POST /crm/etiqueta-contato  { companyId, numero, etiqueta }
+// Etiqueta no CONTATO (aparece em todas as conversas dele), ex. "Comprou na live".
+// Nao e etapa: nao tira nada e nao avisa o CRM. Contato que ainda nao existe fica
+// como esta (o n8n marca na primeira mensagem). Mesmo token das outras rotas /crm.
+export const etiquetaContato = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const corpo = req.body || {};
+  const companyId = Number(corpo.companyId);
+
+  if (!acessoCrmLiberado(req.header("x-webhook-token"), companyId)) {
+    return res.status(403).json({ error: "ERR_FORBIDDEN" });
+  }
+  const etiqueta = String(corpo.etiqueta || "").trim();
+  const numero = String(corpo.numero || "");
+  if (!etiqueta || etiqueta.length > 40 || !numero) {
+    return res.status(400).json({ error: "ERR_INVALID_DATA" });
+  }
+  const r = await etiquetarContatoPorNumero({ companyId, numero, etiqueta });
   return res.status(200).json(r);
 };

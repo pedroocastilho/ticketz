@@ -31,6 +31,8 @@ routes.get(
 routes.get("/crm/conversa-historico", CrmConversasController.conversaHistorico);
 // cartao mudou de coluna no CRM -> etiqueta de etapa da conversa (mesmo token)
 routes.post("/crm/etiqueta-etapa", CrmEtiquetaController.etiquetaEtapa);
+// etiqueta no contato, ex. "Comprou na live" (mesmo token)
+routes.post("/crm/etiqueta-contato", CrmEtiquetaController.etiquetaContato);
 // lead com dono chamou o numero de outro vendedor: a conversa vai para o dono (mesmo token)
 routes.post("/crm/conversa-para-dono", CrmDonoController.conversaParaDono);
 // conexoes com status e numero pareado: rodizio do link e divisao de leads (mesmo token)
