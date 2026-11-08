@@ -1,6 +1,7 @@
 import {
   isAllowedForReadonly,
   isReadonlySupervisor,
+  podeVerConexoes,
   readonlyCompanies
 } from "../../helpers/ReadonlySupervisor";
 
@@ -101,5 +102,26 @@ describe("isAllowedForReadonly", () => {
     ).toBe(true);
     expect(isAllowedForReadonly("PUT", "/whatsapp/9", 5)).toBe(false);
     expect(isAllowedForReadonly("DELETE", "/whatsappsession/9", 5)).toBe(false);
+  });
+});
+
+describe("podeVerConexoes", () => {
+  const lib = { SUPERVISOR_LIBERADOS: "10, 11" };
+  it("admin ve a lista de numeros", () => {
+    expect(podeVerConexoes({ id: 1, profile: "admin" }, lib)).toBe(true);
+  });
+
+  it("supervisor liberado ve (para transferir para outro numero)", () => {
+    expect(podeVerConexoes({ id: 10, profile: "supervisor" }, lib)).toBe(true);
+    expect(podeVerConexoes({ id: "11", profile: "supervisor" }, lib)).toBe(
+      true
+    );
+  });
+
+  it("outros supervisores e vendedores nao veem", () => {
+    expect(podeVerConexoes({ id: 12, profile: "supervisor" }, lib)).toBe(false);
+    expect(podeVerConexoes({ id: 10, profile: "user" }, lib)).toBe(false);
+    expect(podeVerConexoes(undefined, lib)).toBe(false);
+    expect(podeVerConexoes({ id: 10, profile: "supervisor" }, {})).toBe(false);
   });
 });

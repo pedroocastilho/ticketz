@@ -12,6 +12,7 @@ import ListWhatsAppsService from "../services/WhatsappService/ListWhatsAppsServi
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateWhatsAppService from "../services/WhatsappService/UpdateWhatsAppService";
 import AppError from "../errors/AppError";
+import { podeVerConexoes } from "../helpers/ReadonlySupervisor";
 import Ticket from "../models/Ticket";
 import { sendWhatsappUpdate } from "../services/WhatsappService/SocketSendWhatsappUpdate";
 
@@ -32,11 +33,24 @@ interface WhatsappData {
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
 
-  if (req.user.profile !== "admin") {
+  if (!podeVerConexoes(req.user)) {
     return res.status(200).json([]);
   }
 
   const whatsapps = await ListWhatsAppsService({ companyId });
+
+  // supervisor liberado: so o necessario para escolher o numero na transferencia
+  if (req.user.profile !== "admin") {
+    return res.status(200).json(
+      whatsapps.map(w => ({
+        id: w.id,
+        name: w.name,
+        channel: w.channel,
+        status: w.status,
+        isDefault: w.isDefault
+      }))
+    );
+  }
 
   return res.status(200).json(whatsapps);
 };

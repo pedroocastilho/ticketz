@@ -46,6 +46,19 @@ export const isReadonlySupervisor = (
   readonlyCompanies(env).includes(Number(user.companyId)) &&
   !supervisoresLiberados(env).includes(Number(user.id));
 
+// lista de numeros (GET /whatsapp): o Ticketz so entrega para admin (segredos da
+// conexao). Supervisor liberado tambem precisa dela para transferir a conversa
+// para o numero de outro vendedor (08/11/2026, Bia: a caixa "outro numero" vinha
+// vazia); recebe so nome e status (o controller corta o resto).
+export const podeVerConexoes = (
+  user: UserLike | undefined,
+  env: ReadonlyEnv = process.env
+): boolean =>
+  !!user &&
+  (user.profile === "admin" ||
+    (user.profile === "supervisor" &&
+      supervisoresLiberados(env).includes(Number(user.id))));
+
 // O que o supervisor somente leitura ainda pode fazer alem de consultar (GET):
 // sair/renovar a sessao, alterar o proprio cadastro (nome, senha) e religar
 // numeros pela tela "Meu numero" (a permissao fina fica no controller).
