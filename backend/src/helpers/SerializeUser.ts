@@ -32,6 +32,7 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
     super: user.super,
     queues: user.queues,
     readonlySupervisor: isReadonlySupervisor({
+      id: user.id,
       profile: user.profile,
       companyId: user.companyId
     }),

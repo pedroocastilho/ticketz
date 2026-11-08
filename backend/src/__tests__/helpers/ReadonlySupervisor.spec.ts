@@ -17,6 +17,35 @@ describe("readonlyCompanies", () => {
 });
 
 describe("isReadonlySupervisor", () => {
+  it("supervisor liberado (SUPERVISOR_LIBERADOS) mexe como admin; os outros seguem so lendo", () => {
+    const comLiberados = { ...env, SUPERVISOR_LIBERADOS: "10, 14,x" };
+    expect(
+      isReadonlySupervisor(
+        { id: 10, profile: "supervisor", companyId: 2 },
+        comLiberados
+      )
+    ).toBe(false);
+    expect(
+      isReadonlySupervisor(
+        { id: "14", profile: "supervisor", companyId: 2 },
+        comLiberados
+      )
+    ).toBe(false);
+    expect(
+      isReadonlySupervisor(
+        { id: 11, profile: "supervisor", companyId: 2 },
+        comLiberados
+      )
+    ).toBe(true);
+    // sem id (cadastro antigo): continua so lendo
+    expect(
+      isReadonlySupervisor(
+        { profile: "supervisor", companyId: 2 },
+        comLiberados
+      )
+    ).toBe(true);
+  });
+
   it("so supervisor de empresa listada", () => {
     expect(
       isReadonlySupervisor({ profile: "supervisor", companyId: 2 }, env)
@@ -64,8 +93,12 @@ describe("isAllowedForReadonly", () => {
   });
 
   it("gestor pode conectar/desconectar numero pela tela Meu numero, e so isso", () => {
-    expect(isAllowedForReadonly("PUT", "/minhas-conexoes/9/sessao", 5)).toBe(true);
-    expect(isAllowedForReadonly("DELETE", "/backend/minhas-conexoes/9/sessao", 5)).toBe(true);
+    expect(isAllowedForReadonly("PUT", "/minhas-conexoes/9/sessao", 5)).toBe(
+      true
+    );
+    expect(
+      isAllowedForReadonly("DELETE", "/backend/minhas-conexoes/9/sessao", 5)
+    ).toBe(true);
     expect(isAllowedForReadonly("PUT", "/whatsapp/9", 5)).toBe(false);
     expect(isAllowedForReadonly("DELETE", "/whatsappsession/9", 5)).toBe(false);
   });

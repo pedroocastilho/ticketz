@@ -45,6 +45,9 @@ interface Request {
   reqUserId?: number;
   companyId?: number | undefined;
   dontRunChatbot?: boolean;
+  // conversa que volta da fila Livres para o dono do numero porque o cliente ja foi
+  // respondido: nao e "puxar", o CRM nao troca o dono dos cartoes
+  semAvisarCrm?: boolean;
 }
 
 interface Response {
@@ -94,7 +97,8 @@ const UpdateTicketService = async ({
   ticketId,
   reqUserId,
   companyId,
-  dontRunChatbot
+  dontRunChatbot,
+  semAvisarCrm
 }: Request): Promise<Response> => {
   try {
     if (!companyId && !reqUserId) {
@@ -525,7 +529,10 @@ const UpdateTicketService = async ({
       filaDepois: ticket.queue?.name,
       nomeLivres: nomeFilaLivres()
     });
-    if ((puxouDaFilaLivre && ticket.userId) || transferiuParaOutroNumero) {
+    if (
+      !semAvisarCrm &&
+      ((puxouDaFilaLivre && ticket.userId) || transferiuParaOutroNumero)
+    ) {
       NotifyCrmWebhook({
         evento: "dono",
         companyId: ticket.companyId,

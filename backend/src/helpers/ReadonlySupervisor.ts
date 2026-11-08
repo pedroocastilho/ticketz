@@ -11,6 +11,7 @@ import { isRotaSessaoConexaoPropria } from "./ConexaoPropria";
 
 interface ReadonlyEnv {
   SUPERVISOR_READONLY_COMPANIES?: string;
+  SUPERVISOR_LIBERADOS?: string;
   [key: string]: string | undefined;
 }
 
@@ -26,13 +27,24 @@ export const readonlyCompanies = (env: ReadonlyEnv = process.env): number[] =>
     .map(s => Number(s.trim()))
     .filter(n => Number.isInteger(n) && n > 0);
 
+// supervisores liberados (ids de usuario separados por virgula; 08/11/2026, Pedro:
+// a Beatriz transfere e atende como ele e o Francisco). Os outros seguem so lendo.
+export const supervisoresLiberados = (
+  env: ReadonlyEnv = process.env
+): number[] =>
+  String(env.SUPERVISOR_LIBERADOS || "")
+    .split(",")
+    .map(s => Number(s.trim()))
+    .filter(n => Number.isInteger(n) && n > 0);
+
 export const isReadonlySupervisor = (
   user: UserLike | undefined,
   env: ReadonlyEnv = process.env
 ): boolean =>
   !!user &&
   user.profile === "supervisor" &&
-  readonlyCompanies(env).includes(Number(user.companyId));
+  readonlyCompanies(env).includes(Number(user.companyId)) &&
+  !supervisoresLiberados(env).includes(Number(user.id));
 
 // O que o supervisor somente leitura ainda pode fazer alem de consultar (GET):
 // sair/renovar a sessao, alterar o proprio cadastro (nome, senha) e religar
