@@ -29,6 +29,7 @@ import { avisarDonoNaTransferencia } from "../../helpers/DonoNaTransferencia";
 import { nomeFilaLivres } from "../../helpers/VacuoComercial";
 import { marcarConversaMovida } from "../../helpers/TravaEnvio";
 import { esquecerDonoDoNumero } from "../CrmServices/TravaDonoService";
+import { numeroDoAtendente } from "../CrmServices/NumeroProprioService";
 
 export interface UpdateTicketData {
   status?: string;
@@ -147,6 +148,36 @@ const UpdateTicketService = async ({
     if (puxouDaFilaLivre) {
       newWhatsappId = puxouDaFilaLivre.whatsappId;
       queueId = puxouDaFilaLivre.queueId;
+    }
+
+    // comercial (SO_NUMERO_PROPRIO): transferencia feita por uma pessoa leva a
+    // conversa para o numero de quem vai atender (helpers/NumeroProprio.ts)
+    const filaMudou = !!queueId && queueId !== ticket.queueId;
+    const atendenteMudou = !!userId && userId !== ticket.userId;
+    if (
+      user &&
+      !isGroup &&
+      !puxouDaFilaLivre &&
+      (filaMudou || atendenteMudou)
+    ) {
+      const numeroNovo = await numeroDoAtendente({
+        companyId,
+        filaNova: filaMudou ? queueId : null,
+        atendenteNovo: atendenteMudou ? userId : null,
+        numeroAtual: newWhatsappId || ticket.whatsappId
+      });
+      if (numeroNovo) {
+        logger.info(
+          {
+            ticketId: ticket.id,
+            numeroEscolhido: newWhatsappId || null,
+            numeroNovo,
+            byUserId: user.id
+          },
+          "NumeroProprio: conversa vai para o numero de quem vai atender"
+        );
+        newWhatsappId = numeroNovo;
+      }
     }
 
     if (queueId && queueId !== ticket.queueId) {

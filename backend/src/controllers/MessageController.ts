@@ -8,6 +8,7 @@ import {
 } from "../services/CrmServices/TravaDonoService";
 
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
+import { conferirNumeroProprio } from "../services/CrmServices/NumeroProprioService";
 import { getIO } from "../libs/socket";
 import Queue from "../models/Queue";
 import User from "../models/User";
@@ -169,6 +170,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   // (fora do numero do dono). Recusado: apaga as midias que o upload ja gravou
   if (req.user.profile === "user") {
     try {
+      // so pelo proprio numero (SO_NUMERO_PROPRIO; caso Mariana 09/11)
+      await conferirNumeroProprio({
+        companyId,
+        userId,
+        whatsappId: ticket.whatsappId,
+        isGroup: ticket.isGroup || ticket.contact?.isGroup,
+        ticketId: ticket.id
+      });
       await conferirTravaEnvio({ companyId, userId, ticket });
     } catch (err) {
       (medias || []).forEach(m => {
@@ -370,6 +379,13 @@ export const forward = async (
 
   // encaminhar para um lead de outro vendedor e comecar conversa com ele: mesma trava
   if (user.profile === "user" && !contact.isGroup) {
+    // o encaminhamento sai pelo numero da conversa de origem
+    await conferirNumeroProprio({
+      companyId,
+      userId: Number(user.id),
+      whatsappId: message.ticket?.whatsappId || null,
+      ticketId: message.ticketId
+    });
     await conferirTravaDono({
       companyId,
       userId: Number(user.id),
