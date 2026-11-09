@@ -5,6 +5,12 @@ import UserQueue from "../../models/UserQueue";
 import WhatsappQueue from "../../models/WhatsappQueue";
 import { logger } from "../../utils/logger";
 import { isCrmWebhookEnabledFor } from "../WebhookServices/NotifyCrmWebhook";
+import Whatsapp from "../../models/Whatsapp";
+import {
+  conversaMovidaHaPouco,
+  isTravaEnvioEnabled,
+  podeEnviarNaConversa
+} from "../../helpers/TravaEnvio";
 
 // Trava "lead de outro vendedor": ao COMECAR conversa (botao Chamar no WhatsApp do CRM
 // ou Nova conversa), o Ticketz pergunta ao CRM quem e o dono. Sendo outro vendedor, nao
@@ -90,5 +96,71 @@ export const conferirTravaDono = async ({
   const dono = await consultarDonoDoLead(numero);
   if (!dono) return;
   if (await usuarioEhDono(userId, dono.conexaoTicketz)) return;
+  throw new AppError(mensagemLeadDeOutro(dono.nome), 403);
+};
+
+// dono por numero do cliente, guardado 60s: cada mensagem nao pode esperar o CRM
+const CACHE_DONO_MS = 60 * 1000;
+const cacheDono = new Map<string, { dono: DonoDoLead | null; ate: number }>();
+
+const donoComCache = async (numero: string): Promise<DonoDoLead | null> => {
+  const agora = Date.now();
+  const guardado = cacheDono.get(numero);
+  if (guardado && guardado.ate > agora) return guardado.dono;
+  const dono = await consultarDonoDoLead(numero);
+  if (cacheDono.size > 5000) cacheDono.clear();
+  cacheDono.set(numero, { dono, ate: agora + CACHE_DONO_MS });
+  return dono;
+};
+
+// a conversa mudou de numero: o dono no CRM vai mudar, esquece o guardado
+export const esquecerDonoDoNumero = (
+  numero: string | null | undefined
+): void => {
+  if (numero) cacheDono.delete(String(numero));
+};
+
+// Trava de ENVIO (helpers/TravaEnvio.ts): vendedor nao manda mensagem pelo
+// Ticketz para lead do lancamento que e de outro vendedor, fora do numero do dono
+export const conferirTravaEnvio = async ({
+  companyId,
+  userId,
+  ticket
+}: {
+  companyId: number;
+  userId: number;
+  ticket: {
+    id: number;
+    whatsappId: number | null;
+    isGroup?: boolean;
+    contact?: { number?: string; isGroup?: boolean } | null;
+  };
+}): Promise<void> => {
+  if (!isTravaDonoEnabled(companyId) || !isTravaEnvioEnabled()) return;
+  const numero = ticket.contact?.number;
+  if (!numero || ticket.isGroup || ticket.contact?.isGroup) return;
+  if (conversaMovidaHaPouco(ticket.id)) return;
+  const dono = await donoComCache(numero);
+  if (!dono || !dono.conexaoTicketz) return;
+  if (dono.conexaoTicketz === ticket.whatsappId) return;
+  const conexaoDono = await Whatsapp.findByPk(dono.conexaoTicketz, {
+    attributes: ["id", "status", "companyId"]
+  });
+  const pode = podeEnviarNaConversa({
+    temDono: true,
+    conexaoDoDono: dono.conexaoTicketz,
+    conexaoDaConversa: ticket.whatsappId,
+    conexaoDoDonoConectada:
+      !!conexaoDono &&
+      conexaoDono.companyId === companyId &&
+      conexaoDono.status === "CONNECTED",
+    usuarioEhDono: await usuarioEhDono(userId, dono.conexaoTicketz),
+    movidaHaPouco: false
+  });
+  if (pode) return;
+  logger.info(
+    { ticketId: ticket.id, userId, dono: dono.nome },
+    "TravaDono: envio recusado, lead de outro vendedor"
+  );
   throw new AppError(mensagemLeadDeOutro(dono.nome), 403);
 };

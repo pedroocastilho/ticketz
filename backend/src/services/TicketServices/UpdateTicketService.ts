@@ -27,6 +27,8 @@ import { destinoAoPuxarLivre } from "../CrmServices/FilaLivresService";
 import NotifyCrmWebhook from "../WebhookServices/NotifyCrmWebhook";
 import { avisarDonoNaTransferencia } from "../../helpers/DonoNaTransferencia";
 import { nomeFilaLivres } from "../../helpers/VacuoComercial";
+import { marcarConversaMovida } from "../../helpers/TravaEnvio";
+import { esquecerDonoDoNumero } from "../CrmServices/TravaDonoService";
 
 export interface UpdateTicketData {
   status?: string;
@@ -187,6 +189,9 @@ const UpdateTicketService = async ({
         },
         "Conversa transferida para outra conexao"
       );
+      // trava de envio: o dono no CRM vai mudar, libera a conversa por 10 min
+      marcarConversaMovida(ticket.id);
+      esquecerDonoDoNumero(ticket.contact?.number);
     }
 
     // atendente com acesso a fila do ticket tambem pode reabrir conversa fechada,

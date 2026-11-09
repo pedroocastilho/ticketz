@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import fs from "fs";
 import AppError from "../errors/AppError";
 import { isReadonlySupervisor } from "../helpers/ReadonlySupervisor";
+import {
+  conferirTravaDono,
+  conferirTravaEnvio
+} from "../services/CrmServices/TravaDonoService";
 
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
@@ -159,6 +163,23 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     ticket.userId !== userId
   ) {
     throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  // vendedor nao manda mensagem para lead do lancamento que e de outro vendedor
+  // (fora do numero do dono). Recusado: apaga as midias que o upload ja gravou
+  if (req.user.profile === "user") {
+    try {
+      await conferirTravaEnvio({ companyId, userId, ticket });
+    } catch (err) {
+      (medias || []).forEach(m => {
+        try {
+          fs.unlinkSync(m.path);
+        } catch {
+          // arquivo ja nao existe
+        }
+      });
+      throw err;
+    }
   }
 
   const { channel } = ticket;
@@ -345,6 +366,15 @@ export const forward = async (
     (queue && queue.companyId !== companyId)
   ) {
     throw new AppError("ERR_ACCESS_DENIED", 403);
+  }
+
+  // encaminhar para um lead de outro vendedor e comecar conversa com ele: mesma trava
+  if (user.profile === "user" && !contact.isGroup) {
+    await conferirTravaDono({
+      companyId,
+      userId: Number(user.id),
+      numero: contact.number
+    });
   }
 
   await ForwardMessageService(user, message, contact, queue);
