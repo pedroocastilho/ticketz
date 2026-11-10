@@ -23,6 +23,7 @@ import Tooltip from "@material-ui/core/Tooltip";
 import Rating from "@material-ui/lab/Rating";
 import { i18n } from "../../translate/i18n";
 import { formatTimeInterval } from "../../helpers/formatTimeInterval.js";
+import { corTaxaResposta, textoTaxa } from "../../helpers/taxaResposta";
 
 const useStyles = makeStyles(theme => ({
   on: {
@@ -147,7 +148,22 @@ export default function TableAttendantsStatus(props) {
                 {numero(a.conversasAtendidas)}
               </TableCell>
               <TableCell align="center">
+                {numero(a.conversasRecebidas)}
+              </TableCell>
+              <TableCell align="center">
+                {numero(a.conversasRespondidas)}
+              </TableCell>
+              <TableCell align="center">
                 {numero(a.conversasSemResposta)}
+              </TableCell>
+              <TableCell
+                align="center"
+                style={{
+                  color: oculto ? undefined : corTaxaResposta(a.taxaResposta),
+                  fontWeight: 600
+                }}
+              >
+                {numero(textoTaxa(a.taxaResposta))}
               </TableCell>
               <TableCell align="center">
                 {numero(a.conversasIniciadas)}
@@ -206,7 +222,10 @@ export default function TableAttendantsStatus(props) {
             {comercial ? (
               <>
                 <TableCell align="center">Conversas atendidas</TableCell>
+                <TableCell align="center">Clientes que escreveram</TableCell>
+                <TableCell align="center">Respondidos</TableCell>
                 <TableCell align="center">Sem resposta</TableCell>
+                <TableCell align="center">Taxa de resposta</TableCell>
                 <TableCell align="center">Iniciadas pelo vendedor</TableCell>
                 <TableCell align="center">Mensagens enviadas</TableCell>
                 <TableCell align="center">
@@ -227,7 +246,9 @@ export default function TableAttendantsStatus(props) {
               </>
             )}
             <TableCell align="center">
-              {i18n.t("dashboard.avgWaitTime")}
+              {comercial
+                ? "Tempo médio para responder"
+                : i18n.t("dashboard.avgWaitTime")}
             </TableCell>
             <TableCell align="center">
               {comercial

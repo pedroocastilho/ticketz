@@ -27,6 +27,8 @@ describe("PainelComercial", () => {
     const dias = [
       dia(9, {
         conversasAtendidas: 5,
+        conversasRecebidas: 6,
+        conversasRespondidas: 5,
         conversasSemResposta: 1,
         conversasIniciadasVendedor: 2,
         mensagensEnviadas: 40
@@ -34,17 +36,33 @@ describe("PainelComercial", () => {
       dia(9, {
         data: "2026-10-28",
         conversasAtendidas: 3,
+        conversasRecebidas: 2,
+        conversasRespondidas: 1,
+        conversasSemResposta: 1,
         mensagensEnviadas: 10
       }),
       dia(10, { conversasAtendidas: 99, mensagensEnviadas: 999 })
     ];
     expect(somarContagens(dias, [9])).toEqual({
       conversasAtendidas: 8,
-      conversasSemResposta: 1,
+      conversasRecebidas: 8,
+      conversasRespondidas: 6,
+      conversasSemResposta: 2,
+      taxaResposta: 75,
       conversasIniciadas: 2,
       mensagensEnviadas: 50
     });
     expect(somarContagens(dias, [12]).conversasAtendidas).toBe(0);
+  });
+
+  it("taxa de resposta: respondidas / recebidas, sem cliente fica vazia", () => {
+    expect(
+      somarContagens(
+        [dia(9, { conversasRecebidas: 3, conversasRespondidas: 2 })],
+        [9]
+      ).taxaResposta
+    ).toBe(66.7);
+    expect(somarContagens([dia(9, {})], [9]).taxaResposta).toBeNull();
   });
 
   it("liga so nas empresas de PAINEL_COMERCIAL_COMPANIES e le os gestores", () => {

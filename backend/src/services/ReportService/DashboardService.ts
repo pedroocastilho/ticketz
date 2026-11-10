@@ -31,6 +31,11 @@ type TicketTrackingStatistics = {
   // so no painel do comercial: contagens pelas mensagens (o dia inteiro)
   conversasAtendidas?: number;
   mensagensEnviadas?: number;
+  // taxa de resposta do vendedor (2026-11-09, pedido da Bia)
+  conversasRecebidas?: number;
+  conversasRespondidas?: number;
+  conversasSemResposta?: number;
+  taxaResposta?: number | null;
 };
 
 export type DashboardDateRange = {
@@ -170,6 +175,10 @@ export async function calculateTicketStatistics(
     const contagens = somarContagens(dias, conexoes);
     ticketStatistics.conversasAtendidas = contagens.conversasAtendidas;
     ticketStatistics.mensagensEnviadas = contagens.mensagensEnviadas;
+    ticketStatistics.conversasRecebidas = contagens.conversasRecebidas;
+    ticketStatistics.conversasRespondidas = contagens.conversasRespondidas;
+    ticketStatistics.conversasSemResposta = contagens.conversasSemResposta;
+    ticketStatistics.taxaResposta = contagens.taxaResposta;
   }
 
   return ticketStatistics;

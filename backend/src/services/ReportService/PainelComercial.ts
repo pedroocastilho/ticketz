@@ -87,7 +87,13 @@ export type TempoConectado = {
 
 export type Contagens = {
   conversasAtendidas: number;
+  // taxa de resposta (2026-11-09, pedido da Bia): conversa x dia em que o
+  // cliente escreveu; respondida = o vendedor mandou mensagem humana depois
+  conversasRecebidas: number;
+  conversasRespondidas: number;
   conversasSemResposta: number;
+  // respondidas / recebidas em %, 1 casa; null = nenhum cliente escreveu
+  taxaResposta: number | null;
   conversasIniciadas: number;
   mensagensEnviadas: number;
 };
@@ -100,7 +106,10 @@ export function somarContagens(
 ): Contagens {
   const total: Contagens = {
     conversasAtendidas: 0,
+    conversasRecebidas: 0,
+    conversasRespondidas: 0,
     conversasSemResposta: 0,
+    taxaResposta: null,
     conversasIniciadas: 0,
     mensagensEnviadas: 0
   };
@@ -108,10 +117,18 @@ export function somarContagens(
     .filter(d => !conexoes || conexoes.includes(d.conexaoId))
     .forEach(d => {
       total.conversasAtendidas += d.conversasAtendidas || 0;
+      total.conversasRecebidas += d.conversasRecebidas || 0;
+      total.conversasRespondidas += d.conversasRespondidas || 0;
       total.conversasSemResposta += d.conversasSemResposta || 0;
       total.conversasIniciadas += d.conversasIniciadasVendedor || 0;
       total.mensagensEnviadas += d.mensagensEnviadas || 0;
     });
+  if (total.conversasRecebidas) {
+    total.taxaResposta =
+      Math.round(
+        (total.conversasRespondidas / total.conversasRecebidas) * 1000
+      ) / 10;
+  }
   return total;
 }
 

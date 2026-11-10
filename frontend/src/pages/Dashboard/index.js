@@ -16,6 +16,11 @@ import GroupAddIcon from "@material-ui/icons/GroupAdd";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import TimerIcon from "@material-ui/icons/Timer";
+import ChatIcon from "@material-ui/icons/Chat";
+import ReplyIcon from "@material-ui/icons/Reply";
+import SpeakerNotesOffIcon from "@material-ui/icons/SpeakerNotesOff";
+import TrendingUpIcon from "@material-ui/icons/TrendingUp";
+import { corTaxaResposta, textoTaxa } from "../../helpers/taxaResposta";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
@@ -862,14 +867,65 @@ const Dashboard = () => {
             icon={<TimerIcon style={{ fontSize: 100 }} />}
           />
 
-          {/* T.M. DE ESPERA */}
+          {/* T.M. DE ESPERA (comercial: quanto o cliente espera a resposta
+              do vendedor, so no horario do comercial) */}
           <InfoCard
-            title={i18n.t("dashboard.avgWaitTime")}
+            title={
+              comercial
+                ? "Tempo médio para responder"
+                : i18n.t("dashboard.avgWaitTime")
+            }
             value={total(
               formatTimeInterval(ticketsData.ticketStatistics?.avgWaitTime)
             )}
             icon={<HourglassEmptyIcon style={{ fontSize: 100 }} />}
           />
+
+          {/* TAXA DE RESPOSTA (comercial, 2026-11-09, pedido da Bia): conversa
+              x dia em que o cliente escreveu; respondida = o vendedor mandou
+              mensagem depois; sem resposta = ficou no vacuo */}
+          {comercial && (
+            <>
+              <InfoCard
+                title="Clientes que escreveram"
+                value={total(
+                  ticketsData.ticketStatistics?.conversasRecebidas || 0
+                )}
+                icon={<ChatIcon style={{ fontSize: 100 }} />}
+              />
+              <InfoCard
+                title="Respondidos"
+                value={total(
+                  ticketsData.ticketStatistics?.conversasRespondidas || 0
+                )}
+                icon={<ReplyIcon style={{ fontSize: 100 }} />}
+              />
+              <InfoCard
+                title="Sem resposta (vácuo)"
+                value={total(
+                  ticketsData.ticketStatistics?.conversasSemResposta || 0
+                )}
+                icon={<SpeakerNotesOffIcon style={{ fontSize: 100 }} />}
+              />
+              <InfoCard
+                title="Taxa de resposta"
+                value={
+                  <span
+                    style={{
+                      color: corTaxaResposta(
+                        ticketsData.ticketStatistics?.taxaResposta
+                      )
+                    }}
+                  >
+                    {total(
+                      textoTaxa(ticketsData.ticketStatistics?.taxaResposta)
+                    )}
+                  </span>
+                }
+                icon={<TrendingUpIcon style={{ fontSize: 100 }} />}
+              />
+            </>
+          )}
 
           {/* DASHBOARD ATENDIMENTOS NO PERÍODO */}
           <Grid item xs={12}>
