@@ -52,7 +52,10 @@ const TransferTicketModalCustom = ({
   modalOpen,
   onClose,
   ticketid,
-  hideUserSelection = false
+  hideUserSelection = false,
+  // conversa em "Aguardando" transferida para uma pessoa ja cai em "Atendendo" dela
+  // (10/11, Bia: nao conseguia transferir as que estavam aguardando)
+  abrirParaAtendente = false
 }) => {
   const history = useHistory();
   const [options, setOptions] = useState([]);
@@ -129,6 +132,7 @@ const TransferTicketModalCustom = ({
 
       if (selectedUser) {
         data.userId = selectedUser.id;
+        if (abrirParaAtendente) data.status = "open";
       }
 
       if (selectedQueue && selectedQueue !== null) {

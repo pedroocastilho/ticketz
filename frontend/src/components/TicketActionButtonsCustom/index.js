@@ -7,11 +7,12 @@ import {
   ThemeProvider
 } from "@material-ui/core/styles";
 import { IconButton } from "@material-ui/core";
-import { MoreVert, Replay } from "@material-ui/icons";
+import { MoreVert, Replay, SwapHoriz } from "@material-ui/icons";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import TicketOptionsMenu from "../TicketOptionsMenu";
+import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -43,6 +44,7 @@ const TicketActionButtonsCustom = ({ ticket, showTabGroups }) => {
   const history = useHistory();
   const [anchorEl, setAnchorEl] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const ticketOptionsMenuOpen = Boolean(anchorEl);
   const { user } = useContext(AuthContext);
   const { setCurrentTicket } = useContext(TicketsContext);
@@ -201,6 +203,25 @@ const TicketActionButtonsCustom = ({ ticket, showTabGroups }) => {
           />
         </>
       )}
+      {/* gestao (admin/supervisor) transfere direto do "Aguardando", sem aceitar antes
+          (10/11, Bia); sem fila so admin pode abrir, entao a conversa segue aguardando */}
+      {ticket.status === "pending" &&
+        !ticket.isGroup &&
+        (user?.profile === "admin" || user?.profile === "supervisor") && (
+          <>
+            <Tooltip title={i18n.t("ticketOptionsMenu.transfer")}>
+              <IconButton onClick={() => setTransferOpen(true)}>
+                <SwapHoriz />
+              </IconButton>
+            </Tooltip>
+            <TransferTicketModalCustom
+              modalOpen={transferOpen}
+              onClose={() => setTransferOpen(false)}
+              ticketid={ticket.id}
+              abrirParaAtendente={!!ticket.queueId}
+            />
+          </>
+        )}
       {ticket.status === "pending" && (!showTabGroups || !ticket.isGroup) && (
         <ButtonWithSpinner
           loading={loading}
