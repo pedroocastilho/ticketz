@@ -30,6 +30,7 @@ import { nomeFilaLivres } from "../../helpers/VacuoComercial";
 import { marcarConversaMovida } from "../../helpers/TravaEnvio";
 import { esquecerDonoDoNumero } from "../CrmServices/TravaDonoService";
 import { numeroDoAtendente } from "../CrmServices/NumeroProprioService";
+import { levaParaNumeroDoAtendente } from "../../helpers/NumeroProprio";
 
 export interface UpdateTicketData {
   status?: string;
@@ -158,7 +159,7 @@ const UpdateTicketService = async ({
       user &&
       !isGroup &&
       !puxouDaFilaLivre &&
-      (filaMudou || atendenteMudou)
+      levaParaNumeroDoAtendente({ status, filaMudou, atendenteMudou })
     ) {
       const numeroNovo = await numeroDoAtendente({
         companyId,
@@ -291,7 +292,9 @@ const UpdateTicketService = async ({
       throw new AppError("ERR_NO_PERMISSION", 403);
     }
 
-    if (oldStatus === "closed") {
+    // so ao reabrir: fechar de novo uma conversa ja fechada (lista desatualizada) nao
+    // pode dar "Ja existe um tiquete aberto" por causa da conversa nova do cliente
+    if (oldStatus === "closed" && status !== "closed") {
       await CheckContactOpenTickets(ticket.contactId, ticket.whatsappId);
       chatbot = null;
       queueOptionId = null;

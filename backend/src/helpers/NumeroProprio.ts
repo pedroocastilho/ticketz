@@ -52,6 +52,21 @@ export const donoDoNumeroParaUsuario = ({
 export const mensagemNumeroDeOutro = (dono: string): string =>
   `Esta conversa está no número de ${dono}. Peça para a gestão passar a conversa para o seu número.`;
 
+// Transferencia feita por uma pessoa leva a conversa para o numero de quem vai atender?
+// Fechar nunca troca de numero (10/11, caso Mariana / Abilio #2191): o X de fechar manda
+// o proprio usuario como atendente, e numa conversa da fila Livres em outro numero isso
+// virava "levar para o numero da Mariana", onde o cliente ja tinha conversa aberta, e o
+// fechamento falhava com "Ja existe um tiquete aberto para este contato".
+export const levaParaNumeroDoAtendente = ({
+  status,
+  filaMudou,
+  atendenteMudou
+}: {
+  status?: string;
+  filaMudou: boolean;
+  atendenteMudou: boolean;
+}): boolean => status !== "closed" && (filaMudou || atendenteMudou);
+
 export interface LigacaoNumero {
   whatsappId: number;
   queueId: number;

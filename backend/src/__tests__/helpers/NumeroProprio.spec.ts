@@ -1,6 +1,7 @@
 import {
   donoDoNumeroParaUsuario,
   isNumeroProprioEnabled,
+  levaParaNumeroDoAtendente,
   mensagemNumeroDeOutro,
   numeroDeDestino
 } from "../../helpers/NumeroProprio";
@@ -108,5 +109,44 @@ describe("numeroDeDestino", () => {
     expect(
       numeroDeDestino({ ligacoes, filasAlvo: [99], numeroAtual: 21 })
     ).toBeNull();
+  });
+});
+
+describe("levaParaNumeroDoAtendente", () => {
+  it("fechar nunca troca de numero (caso Mariana fechando Abilio #2191 da Livres)", () => {
+    expect(
+      levaParaNumeroDoAtendente({
+        status: "closed",
+        filaMudou: false,
+        atendenteMudou: true
+      })
+    ).toBe(false);
+    expect(
+      levaParaNumeroDoAtendente({
+        status: "closed",
+        filaMudou: true,
+        atendenteMudou: true
+      })
+    ).toBe(false);
+  });
+
+  it("transferir ou aceitar continua levando para o numero de quem atende", () => {
+    expect(
+      levaParaNumeroDoAtendente({ filaMudou: true, atendenteMudou: false })
+    ).toBe(true);
+    expect(
+      levaParaNumeroDoAtendente({
+        status: "open",
+        filaMudou: false,
+        atendenteMudou: true
+      })
+    ).toBe(true);
+    expect(
+      levaParaNumeroDoAtendente({
+        status: "open",
+        filaMudou: false,
+        atendenteMudou: false
+      })
+    ).toBe(false);
   });
 });
