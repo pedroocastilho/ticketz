@@ -27,6 +27,7 @@ type IndexQuery = {
   showAll: string;
   withUnreadMessages: string;
   notClosed: string;
+  semResposta?: string;
   all: string;
   queueIds: string;
   contactId: string;
@@ -62,6 +63,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     users: userIdsStringified,
     withUnreadMessages,
     notClosed,
+    semResposta,
     all
   } = req.query as IndexQuery;
 
@@ -102,6 +104,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     queueIds,
     withUnreadMessages,
     notClosed: !!notClosed,
+    semResposta: semResposta === "true",
     all: !!all,
     companyId
   });

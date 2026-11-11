@@ -3,7 +3,8 @@ import React, {
   useEffect,
   useReducer,
   useContext,
-  useRef
+  useRef,
+  useMemo
 } from "react";
 
 import { makeStyles } from "@material-ui/core/styles";
@@ -220,7 +221,8 @@ const TicketsListCustom = props => {
     updateCount,
     style,
     setTabOpen,
-    showTabGroups
+    showTabGroups,
+    semResposta
   } = props;
   const classes = useStyles();
   const [paginationCursor, setPaginationCursor] = useState({
@@ -250,7 +252,8 @@ const TicketsListCustom = props => {
     contactId,
     tags,
     users,
-    selectedQueueIds
+    selectedQueueIds,
+    semResposta
   ]);
 
   const {
@@ -272,8 +275,18 @@ const TicketsListCustom = props => {
     contactId,
     tags: JSON.stringify(tags),
     users: JSON.stringify(users),
-    queueIds: JSON.stringify(selectedQueueIds)
+    queueIds: JSON.stringify(selectedQueueIds),
+    semResposta: semResposta ? "true" : undefined
   });
+
+  // filtro "Sem resposta" (Mariana 11/11): o servidor ja manda so as conversas em que o
+  // cliente falou por ultimo; aqui a conversa respondida sai na hora e a que o cliente
+  // voltou a escrever entra pelo socket, sem recarregar
+  const conversasVisiveis = useMemo(
+    () =>
+      semResposta ? ticketsList.filter(t => !t.lastMessageFromMe) : ticketsList,
+    [ticketsList, semResposta]
+  );
 
   useEffect(() => {
     const queueIds = queues.map(q => q.id);
@@ -467,10 +480,12 @@ const TicketsListCustom = props => {
   useEffect(() => {
     if (typeof updateCount === "function") {
       // com mais conversas para carregar, o numero e so o que ja veio: "40+"
-      updateCount(hasMore ? `${ticketsList.length}+` : ticketsList.length);
+      updateCount(
+        hasMore ? `${conversasVisiveis.length}+` : conversasVisiveis.length
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticketsList, hasMore]);
+  }, [conversasVisiveis, hasMore]);
 
   const loadMore = () => {
     const lastTicket = ticketsList[ticketsList.length - 1];
@@ -568,7 +583,7 @@ const TicketsListCustom = props => {
         As conversas selecionadas vao para Resolvidos sem mandar mensagem ao
         cliente. Se o cliente escrever de novo, a conversa volta.
       </ConfirmationModal>
-      {podeSelecionar && ticketsList.length > 0 && (
+      {podeSelecionar && conversasVisiveis.length > 0 && (
         <div className={classes.selecaoBarra}>
           {resolvendo ? (
             <span>
@@ -579,9 +594,11 @@ const TicketsListCustom = props => {
               <span>{selecionados.length} selecionada(s)</span>
               <Button
                 size="small"
-                onClick={() => setSelecionados(ticketsList.map(t => t.id))}
+                onClick={() =>
+                  setSelecionados(conversasVisiveis.map(t => t.id))
+                }
               >
-                Marcar todas ({ticketsList.length})
+                Marcar todas ({conversasVisiveis.length})
               </Button>
               <Button
                 size="small"
@@ -611,7 +628,7 @@ const TicketsListCustom = props => {
         onScroll={handleScroll}
       >
         <List style={{ paddingTop: 0 }}>
-          {ticketsList.length === 0 && !loading ? (
+          {conversasVisiveis.length === 0 && !loading ? (
             <div className={classes.noTicketsDiv}>
               <span className={classes.noTicketsTitle}>
                 {i18n.t("ticketsList.noTicketsTitle")}
@@ -622,7 +639,7 @@ const TicketsListCustom = props => {
             </div>
           ) : (
             <>
-              {ticketsList.map(ticket =>
+              {conversasVisiveis.map(ticket =>
                 selecionando ? (
                   <div
                     key={ticket.id}

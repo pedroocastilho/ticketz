@@ -128,6 +128,35 @@ describe("ListTicketsService: carregar mais nao pula conversa com o mesmo horari
   });
 });
 
+describe("ListTicketsService: filtro Sem resposta (Mariana 11/11)", () => {
+  it("ligado: so conversas em que a ultima mensagem e do cliente", async () => {
+    respostas.push(ids(1, 2), ids(1, 2));
+    await ListTicketsService({ ...base, semResposta: true });
+
+    expect(consultas[0]).toMatch(/"Ticket"\."lastMessageFromMe" = false/);
+    expect(consultas[0]).toMatch(/"Ticket"\."status" = 'open'/);
+    expect(consultas[0]).toMatch(/"Ticket"\."companyId" = 2/);
+  });
+
+  it("vale junto com o filtro de usuario (nao e apagado por ele)", async () => {
+    jest
+      .spyOn(Ticket, "findAll")
+      .mockImplementationOnce(async () => [Ticket.build({ id: 7 })]);
+    respostas.push(ids(7, 7), ids(7, 7));
+    await ListTicketsService({ ...base, users: [3], semResposta: true });
+
+    expect(consultas[0]).toMatch(/"Ticket"\."lastMessageFromMe" = false/);
+    expect(consultas[0]).toMatch(/"Ticket"\."id" IN \(7\)/);
+  });
+
+  it("desligado: nao filtra por quem falou por ultimo", async () => {
+    respostas.push(ids(1, 2), ids(1, 2));
+    await ListTicketsService(base);
+
+    expect(consultas[0]).not.toContain("lastMessageFromMe");
+  });
+});
+
 describe("ListTicketsService: busca", () => {
   it("varias mensagens achadas na mesma conversa contam uma vez so", async () => {
     respostas.push(ids(1, 2), ids(1, 2));

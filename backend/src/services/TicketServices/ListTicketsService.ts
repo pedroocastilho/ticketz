@@ -38,6 +38,7 @@ interface Request {
   userId: string;
   withUnreadMessages?: string;
   notClosed?: boolean;
+  semResposta?: boolean;
   all?: boolean;
   queueIds: number[];
   contactId?: number;
@@ -102,6 +103,7 @@ const ListTicketsService = async ({
   userId,
   withUnreadMessages,
   notClosed,
+  semResposta,
   all,
   companyId
 }: Request): Promise<Response> => {
@@ -384,6 +386,15 @@ const ListTicketsService = async ({
     whereCondition = {
       ...whereCondition,
       status: { [Op.ne]: "closed" }
+    };
+  }
+
+  // filtro "Sem resposta" da aba Atendendo (11/11/2026, Mariana): so as conversas em
+  // que a ultima mensagem e do cliente. Fica no fim para nenhum filtro acima apagar
+  if (semResposta) {
+    whereCondition = {
+      ...whereCondition,
+      lastMessageFromMe: false
     };
   }
 

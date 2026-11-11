@@ -129,6 +129,8 @@ const TicketsManagerTabs = () => {
   const [selectedContact, setSelectedContact] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  // "Sem resposta" na aba Atendendo (Mariana 11/11): so conversas em que o cliente falou por ultimo
+  const [semResposta, setSemResposta] = useState(false);
 
   const { getSetting } = useSettings();
   const [showTabGroups, setShowTabGroups] = useState(false);
@@ -347,9 +349,26 @@ const TicketsManagerTabs = () => {
             value={"pending"}
           />
         </Tabs>
+        {tabOpen === "open" && (
+          <Box style={{ paddingLeft: 12, paddingRight: 12 }}>
+            <FormControlLabel
+              label="Só sem resposta (o cliente falou por último)"
+              control={
+                <Switch
+                  size="small"
+                  checked={semResposta}
+                  onChange={() => setSemResposta(prevState => !prevState)}
+                  name="semResposta"
+                  color="primary"
+                />
+              }
+            />
+          </Box>
+        )}
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
             status="open"
+            semResposta={semResposta}
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
             updateCount={val => setOpenCount(val)}

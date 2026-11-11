@@ -19,6 +19,7 @@ const useTickets = ({
   queueIds,
   withUnreadMessages,
   notClosed,
+  semResposta,
   all
 }) => {
   const [loading, setLoading] = useState(true);
@@ -48,6 +49,7 @@ const useTickets = ({
               queueIds,
               withUnreadMessages,
               notClosed,
+              semResposta,
               all
             }
           });
@@ -78,6 +80,7 @@ const useTickets = ({
     withUnreadMessages,
     isSearch,
     notClosed,
+    semResposta,
     all,
     refreshTrigger
   ]);
@@ -103,6 +106,7 @@ const useTickets = ({
           queueIds,
           withUnreadMessages,
           notClosed,
+          semResposta,
           all,
           minUpdatedAt
         }
@@ -123,6 +127,7 @@ const useTickets = ({
       queueIds,
       withUnreadMessages,
       notClosed,
+      semResposta,
       all
     ]
   );
