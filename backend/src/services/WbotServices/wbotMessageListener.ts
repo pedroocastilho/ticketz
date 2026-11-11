@@ -43,6 +43,7 @@ import NotifyHumanHandoff from "./NotifyHumanHandoff";
 import NotifyCrmWebhook, {
   isRecentMessage
 } from "../WebhookServices/NotifyCrmWebhook";
+import NotifyOuvidoriaWebhook from "../WebhookServices/NotifyOuvidoriaWebhook";
 import { marcarEmAtendimento } from "../CrmServices/EtiquetaEtapaService";
 import HandleReplyFromPhone from "../../helpers/HandleReplyFromPhone";
 import UpdateTicketService, {
@@ -2047,6 +2048,23 @@ const handleMessage = async (
         fromMe: !!msg.key.fromMe,
         messageAt,
         body: bodyMessage,
+        justCreated,
+        ticket: {
+          id: ticket.id,
+          uuid: ticket.uuid,
+          status: ticket.status,
+          queueId: ticket.queueId,
+          userId: ticket.userId
+        },
+        whatsapp: { id: whatsapp.id, name: whatsapp.name },
+        contact: { id: contact.id, name: contact.name, number: contact.number }
+      });
+      // aba Reembolsos do CRM: so as conexoes da Ouvidoria (OUVIDORIA_CONEXOES)
+      // avisam; qualquer outra conexao sai na primeira linha do servico
+      NotifyOuvidoriaWebhook({
+        companyId,
+        fromMe: !!msg.key.fromMe,
+        messageAt,
         justCreated,
         ticket: {
           id: ticket.id,
